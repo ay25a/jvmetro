@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class StationService {
-
   private ArrayList<Station> stations;
 
   public StationService(FileManager fm) {
@@ -23,30 +22,42 @@ public class StationService {
         try {
           stations.add(Station.from(map));
         } catch (DeserializationException e) {
-          System.err.println("Skipping loading a station: " + e.getMessage());
+          System.err.println("Station cannot be loaded:: " + e.getMessage());
         }
       }
     } catch (IOException | FileProcessingException e) {
-      System.err.println("Station will be loaded empty: " + e.getMessage());
+      System.err.println("Stations will not be loaded:: " + e.getMessage());
     }
   }
 
   public void saveStations(FileManager fm) throws IOException {
     ArrayList<HashMap<String, String>> parsed = new ArrayList<>();
-
-    stations.forEach(station -> parsed.add(station.serialized()));
+    stations.forEach(station -> parsed.add(station.serialize()));
 
     fm.writeData("stations", parsed);
-  };
+  }
 
-  public void addStation(Station station) throws DuplicateEntryException {
-    for (Station s : stations) {
-      if (s.getName().equals(station.getName())) {
-        throw new DuplicateEntryException("Station cannot be added; Duplicate name found for " + station.getName());
-      }
+  public Station getStation(String stationName) throws EntryNotFoundException {
+    Station station = null;
+
+    for (Station st : stations) {
+      if (st.name().equals(stationName))
+        station = st;
     }
 
-    stations.add(station);
+    if (station == null)
+      throw new EntryNotFoundException("Station does not Exist!");
+
+    return station;
+  }
+
+  public void addStation(Station newStation) throws DuplicateEntryException {
+    try {
+      getStation(newStation.name());
+      throw new DuplicateEntryException("Station already Exists!");
+    } catch (EntryNotFoundException ex) {
+      stations.add(newStation);
+    }
   };
 
   public Station[] getStations() {

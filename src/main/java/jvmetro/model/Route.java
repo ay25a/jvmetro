@@ -3,51 +3,26 @@ package jvmetro.model;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Route {
-  private String routeID;
-  private String srcStation;
-  private String destStation;
-  private double distanceKm;
-
-  public Route(String id, String src, String dest, double distance) throws DeserializationException {
-    if (id.isBlank() || src.isBlank() || dest.isBlank() || distance <= 0.0) {
-      throw new DeserializationException("Route cannot be created; Invalid Values");
-    }
-
-    this.routeID = id;
-    this.srcStation = src;
-    this.destStation = dest;
-    this.distanceKm = distance;
+public record Route(int id, String srcStationName, String destStationName, double distanceKM) {
+  public Route {
+    if (id == 0 || srcStationName.isBlank() || destStationName.isBlank() || distanceKM <= 0.0)
+      throw new IllegalArgumentException("Route is not valid");
   }
 
   public static Route from(Map<String, String> map) throws DeserializationException {
     try {
-      return new Route(map.get("id"), map.get("src"), map.get("dest"), Double.parseDouble(map.get("distance")));
-    } catch (NullPointerException e) {
-      throw new DeserializationException("Route cannot be loaded; required field are missing!");
-    } catch (IllegalArgumentException e) {
-      throw new DeserializationException("Route cannot be loaded; incorrect field values!");
+      return new Route(Integer.parseInt(map.get("id")), map.get("src"), map.get("dest"),
+          Double.parseDouble(map.get("distance")));
+    } catch (NullPointerException | IllegalArgumentException e) {
+      throw new DeserializationException("Route is Corrupted!");
     }
   }
 
   public HashMap<String, String> serialize() {
-    return new HashMap<String, String>(
-        Map.of("id", routeID, "src", srcStation, "dest", destStation, "distance", String.valueOf(distanceKm)));
-  }
-
-  public String getID() {
-    return this.routeID;
-  }
-
-  public String getSourceStation() {
-    return this.srcStation;
-  }
-
-  public String getDestinationStation() {
-    return this.destStation;
-  }
-
-  public double getDistance() {
-    return this.distanceKm;
+    return new HashMap<String, String>(Map.of(
+          "id", String.valueOf(id), 
+          "src", srcStationName, 
+          "dest", destStationName, 
+          "distance", String.valueOf(distanceKM)));
   }
 }

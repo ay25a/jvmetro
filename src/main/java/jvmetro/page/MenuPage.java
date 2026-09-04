@@ -23,7 +23,7 @@ public class MenuPage implements Page {
 
     for (int i = 0; i < items.size(); ++i)
       ctx.output.printf("(%d) %s\n", i + 1, items.get(i).name());
-    ctx.output.printf("(%d) %s\n", items.size(), menuBack);
+    ctx.output.printf("(%d) %s\n", items.size() + 1, menuBack);
 
     try {
       ctx.output.print("> ");

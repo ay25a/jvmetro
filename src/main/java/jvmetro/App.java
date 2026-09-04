@@ -6,7 +6,7 @@ import jvmetro.service.UserService;
 import java.io.IOException;
 
 import jvmetro.page.PageController;
-import jvmetro.cli.UserPages;
+import jvmetro.cli.CommonPages;
 
 public class App {
   private AppContext context;
@@ -17,7 +17,7 @@ public class App {
   }
 
   private void run() {
-    PageController controller = new PageController(context, UserPages.introduction);
+    PageController controller = new PageController(context, CommonPages.introduction);
     controller.run();
   }
 

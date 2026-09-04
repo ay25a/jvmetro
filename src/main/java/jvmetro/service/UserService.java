@@ -51,7 +51,9 @@ public class UserService {
   }
 
   public User getUser(String email) throws EntryNotFoundException {
-    if (users.containsKey(email))
+    User user = users.get(email);
+
+    if (user == null)
       throw new EntryNotFoundException("No user found with the provided email");
 
     return users.get(email);

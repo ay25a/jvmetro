@@ -2,18 +2,10 @@
 - Name, Email, Password, and Role.
 - Email is the ID
 ### Station
-* Name, Location, and Station Status
+* Name, Location.
 * Name is the ID
-* Status: 
-	* Open (can make ticket)
-	* Closed/Maintenance (cannot make ticket) 
-
 ### Train
-* ID, Capacity, Status, and Route
-* Status: 
-	* Active (can make ticket)
-	* Out of Service/Maintenance (cannot make ticket)
-
+* Name, Capacity
 ### Route
 - ID, Source, Destination, and Distance.
 

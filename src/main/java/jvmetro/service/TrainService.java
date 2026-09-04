@@ -22,30 +22,41 @@ public class TrainService {
         try {
           trains.add(Train.from(map));
         } catch (DeserializationException ex) {
-          System.err.println("Skipping Loading a Train: " + ex.getMessage());
+          System.err.println("Train cannot be loaded: " + ex.getMessage());
         }
       }
     } catch (IOException | FileProcessingException ex) {
-      System.err.println("Trains will be loaded empty; " + ex.getMessage());
+      System.err.println("Trains will not be loaded: " + ex.getMessage());
     }
   }
 
   public void saveTrains(FileManager fm) throws IOException {
     ArrayList<HashMap<String, String>> parsed = new ArrayList<>();
-    ;
-
     trains.forEach(train -> parsed.add(train.serialize()));
 
     fm.writeData("trains", parsed);
   }
 
-  public void addTrain(Train train) {
-    for (Train t : trains) {
-      if (t.getName().equals(train.getName()))
-        throw new DuplicateEntryException("Train cannot be added; Duplicate name found for " + train.getName());
+  public Train getTrain(String trainName) throws EntryNotFoundException {
+    Train train = null;
+    for(Train tr: trains){
+      if(tr.name().equals(trainName))
+        train = tr;
     }
 
-    trains.add(train);
+    if(train == null)
+      throw new EntryNotFoundException("Train doesn't Exist!");
+
+    return train;
+  }
+
+  public void addTrain(Train train) throws DuplicateEntryException {
+    try{
+      getTrain(train.name());
+      throw new DuplicateEntryException("Train already Exists!");
+    }catch(EntryNotFoundException ex){
+      trains.add(train);
+    }
   }
 
   public Train[] getTrains() {

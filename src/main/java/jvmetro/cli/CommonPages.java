@@ -14,12 +14,19 @@ import jvmetro.model.Passenger;
 
 import java.util.List;
 
-public class UserPages {
-  private static boolean isTryAgain(AppContext ctx) {
+public class CommonPages {
+  public static boolean isTryAgain(AppContext ctx) {
     ctx.output.print("Try again? ");
     String choice = ctx.scanner.nextLine().toLowerCase().trim();
 
     return choice.equals("y") || choice.equals("yes");
+  }
+
+  private static final Page getUserMenu(User user) {
+    if (user instanceof Admin)
+      return AdminPages.mainMenu;
+
+    return PassengerPages.mainMenu;
   }
 
   private static final Page login = ctx -> {
@@ -32,8 +39,12 @@ public class UserPages {
       ctx.output.print("Password: ");
       String password = ctx.scanner.nextLine().trim();
 
-      context.setUser(context.getUserService().login(email, password));
-      return new PageResult.Exit();
+      User user = context.getUserService().login(email, password);
+
+      context.setUser(user);
+      context.loadServices();
+
+      return new PageResult.Replace(getUserMenu(user));
     } catch (InvalidLoginException ex) {
       ctx.output.println(ex.getMessage());
 
@@ -58,17 +69,18 @@ public class UserPages {
       String accountType = ctx.scanner.nextLine().toLowerCase().trim();
 
       User user = null;
-      if(accountType.equals("admin"))
+      if (accountType.equals("admin"))
         user = new Admin(name, email, password);
-      else if(accountType.equals("passenger"))
+      else if (accountType.equals("passenger"))
         user = new Passenger(name, email, password, 0.0);
       else
         throw new IllegalArgumentException("Unknown Account Type Entered");
 
       context.getUserService().addUser(user);
       context.setUser(user);
+      context.loadServices();
 
-      return new PageResult.Exit();
+      return new PageResult.Replace(getUserMenu(user));
     } catch (IllegalArgumentException | DuplicateEntryException ex) {
       ctx.output.println(ex.getMessage());
 
@@ -80,4 +92,30 @@ public class UserPages {
       new MenuItem("Register", register),
       new MenuItem("Login", login)));
 
+  public static final Page showProfile = ctx -> {
+    AppContext context = (AppContext) ctx;
+
+    User user = context.getUser();
+
+    ctx.output.printf("Name: %s\n", user.getName());
+    ctx.output.printf("Email: %s\n", user.getEmail());
+
+    return new PageResult.Back();
+  };
+
+  public static final Page editProfile = rctx -> {
+    AppContext ctx = (AppContext)rctx;
+
+    ctx.output.println("New Name: ");
+    String name = ctx.scanner.nextLine();
+
+    try {
+      ctx.getUser().setName(name);
+      ctx.output.println("Name Changed Successfully");
+    } catch (IllegalArgumentException ex) {
+      ctx.output.println(ex.getMessage());
+    }
+
+    return new PageResult.Back();
+  };
 }

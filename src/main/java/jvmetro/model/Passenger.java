@@ -2,14 +2,14 @@ package jvmetro.model;
 
 import java.util.HashMap;
 
-public class Passenger extends User {
+public final class Passenger extends User {
   private double balance;
 
   public Passenger(String name, String email, String password, double balance) throws IllegalArgumentException {
     super(name, email, password, UserRole.PASSENGER);
 
     if (balance < 0.0)
-      throw new IllegalArgumentException("Cannot create Passenger; Negative Balance is not allowed!");
+      throw new IllegalArgumentException("Passenger cannot have negative balance!");
 
     this.balance = balance;
   }

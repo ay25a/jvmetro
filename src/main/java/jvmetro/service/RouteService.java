@@ -19,48 +19,67 @@ public class RouteService {
     try {
       ArrayList<HashMap<String, String>> parsed = fm.readData("routes");
 
-      for(HashMap<String, String> map : parsed) {
+      for (HashMap<String, String> map : parsed) {
         try {
           routes.add(Route.from(map));
         } catch (DeserializationException e) {
-          System.err.println("Skipping loading a route; " + e.getMessage());
+          System.err.println("Route will be skipped: " + e.getMessage());
         }
       }
     } catch (IOException | FileProcessingException e) {
-      System.err.println("Routes will be loaded empty; " + e.getMessage());
+      System.err.println("Routes will not be loaded: " + e.getMessage());
     }
   }
 
   public void saveRoutes(FileManager fm) throws IOException {
     ArrayList<HashMap<String, String>> parsed = new ArrayList<>();
-
     routes.forEach(route -> parsed.add(route.serialize()));
 
     fm.writeData("routes", parsed);
   }
 
   public void addRoute(Station src, Station dest, double distance) throws DuplicateEntryException {
-    String routeID = String.valueOf((src.getName() + dest.getName()).hashCode());
-    
-    for (Route r : routes) {
-      if (r.getID().equals(routeID)) {
-        throw new DuplicateEntryException("Routes cannot be added; Route already exist!");
-      }
+    int routeID = (src.name() + dest.name()).hashCode();
 
-      routes.add(new Route(routeID, src.getName(), dest.getName(), distance));
+    for (Route r : routes) {
+      if (r.id() == routeID && r.srcStationName().equals(src.name()))
+        throw new DuplicateEntryException("Route already Exist!");
     }
+
+    routes.add(new Route(routeID, src.name(), dest.name(), distance));
   }
 
-  public Route findRoute(Station src, Station dest) throws EntryNotFoundException{
-    String searchID = String.valueOf((src.getName() + dest.getName()).hashCode());
-
-    for (Route r : routes) {
-      if (r.getID().equals(searchID)) {
-        return r;
+  private double findDistance(String first, String from, String to) {
+    for (Route route : routes) {
+      if (route.srcStationName().equals(from) && route.destStationName().equals(to)) {
+        return route.distanceKM();
       }
     }
 
-    throw new EntryNotFoundException("No route from '" + src.getName() + "' to '" + dest.getName() + "'");
+    for (Route route : routes) {
+      if(first != null && first.equals(route.srcStationName()))
+        break;
+
+      if (route.srcStationName().equals(from)) {
+        if(first == null)
+          first = route.srcStationName();
+        double remainingDistance = findDistance(first, route.destStationName(), to);
+
+        if (remainingDistance >= 0)
+          return route.distanceKM() + remainingDistance;
+      }
+    }
+
+    return -1;
+  }
+
+  public Route findRoute(Station src, Station dest) throws EntryNotFoundException {
+    double distance = findDistance(null, src.name(), dest.name());
+
+    if(distance == -1)
+      throw new EntryNotFoundException("Route doesn't Exist!");
+
+    return new Route(1, src.name(), dest.name(), distance);
   }
 
   public Route[] getRoutes() {

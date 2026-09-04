@@ -4,15 +4,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-public abstract class User {
+public sealed class User permits Passenger, Admin {
   private static final String EMAIL_REGEX = "^(?=.{1,64}@)[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*@" +
       "[^-][A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$";
   private static final Pattern EMAIL_PATTERN = Pattern.compile(EMAIL_REGEX);
 
   private String name;
-  private String email;
-  private String password;
-  private UserRole role;
+  private final String email;
+  private final String password;
+  private final UserRole role;
 
   public User(String name, String email, String password, UserRole role) throws IllegalArgumentException {
     if (name.isBlank() || email.isBlank() || password.isBlank() || role == null)
@@ -34,19 +34,19 @@ public abstract class User {
     try {
       if (UserRole.valueOf(map.get("role")) == UserRole.ADMIN)
         return new Admin(map.get("name"), map.get("email"), map.get("password"));
-      else
-        return new Passenger(map.get("name"), map.get("email"), map.get("password"),
-            Double.valueOf(map.get("balance")));
-    } catch (NullPointerException ex) {
-      throw new DeserializationException("User cannot be loaded; required fields are missing!");
-    } catch (IllegalArgumentException ex) {
-      throw new DeserializationException("User cannot be loaded; incorrect field values!");
+
+      return new Passenger(map.get("name"), map.get("email"), map.get("password"), Double.valueOf(map.get("balance")));
+    } catch (NullPointerException | IllegalArgumentException ex) {
+      throw new DeserializationException("User is Corrupted!");
     }
   }
 
   public HashMap<String, String> serialize() {
-    return new HashMap<String, String>(
-        Map.of("name", name, "email", email, "password", password, "role", role.name()));
+    return new HashMap<String, String>(Map.of(
+        "name", name,
+        "email", email,
+        "password", password,
+        "role", role.name()));
   }
 
   public boolean login(String email, String password) {

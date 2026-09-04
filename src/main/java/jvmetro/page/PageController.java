@@ -21,6 +21,7 @@ public class PageController {
     while (!stack.isEmpty()) {
       Page page = stack.peek();
 
+      context.output.println();
       PageResult res = page.show(context);
 
       switch (res) {
@@ -41,6 +42,7 @@ public class PageController {
           break;
       }
     }
+
     context.scanner.close();
   }
 }
