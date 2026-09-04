@@ -12,52 +12,46 @@ import jvmetro.model.Train;
 import java.util.List;
 
 public class AdminPages {
-  private static final Page addStation = rctx -> {
-    AppContext ctx = (AppContext)rctx;
+  private static final Page addStation = scanner -> {
+    System.out.print("Enter Station Name: ");
+    String name = scanner.nextLine();
 
-    ctx.output.print("Enter Station Name: ");
-    String name = ctx.scanner.nextLine();
-
-    ctx.output.print("Enter Station Location: ");
-    String location = ctx.scanner.nextLine();
+    System.out.print("Enter Station Location: ");
+    String location = scanner.nextLine();
 
     try {
       Station station = new Station(name, location);
-      ctx.getStationService().addStation(station);
-      ctx.output.println("Station added Successfully");
-    }catch(DuplicateEntryException ex){
-      ctx.output.println(ex.getMessage());
+      AppContext.getContext().getStationService().addStation(station);
+      System.out.println("Station added Successfully");
+    } catch (DuplicateEntryException ex) {
+      System.out.println(ex.getMessage());
     }
 
     return new PageResult.Back();
   };
 
-  private static final Page addTrain = rctx -> {
-    AppContext ctx = (AppContext)rctx;
+  private static final Page addTrain = scanner -> {
+    System.out.print("Enter Train Name: ");
+    String name = scanner.nextLine();
 
-    ctx.output.print("Enter Train Name: ");
-    String name = ctx.scanner.nextLine();
-
-    ctx.output.print("Enter Train Capacity: ");
-    String capacity = ctx.scanner.nextLine();
+    System.out.print("Enter Train Capacity: ");
+    String capacity = scanner.nextLine();
 
     try {
       Train train = new Train(name, Integer.parseInt(capacity));
-      ctx.getTrainService().addTrain(train);
-      ctx.output.println("Train Added Successfully");
-    }catch(NumberFormatException ex){
-      ctx.output.println("Invalid Train Capacity");
-    }
-    catch(DuplicateEntryException | IllegalArgumentException ex){
-      ctx.output.println(ex.getMessage());
+      AppContext.getContext().getTrainService().addTrain(train);
+      System.out.println("Train Added Successfully");
+    } catch (NumberFormatException ex) {
+      System.out.println("Invalid Train Capacity");
+    } catch (DuplicateEntryException | IllegalArgumentException ex) {
+      System.out.println(ex.getMessage());
     }
 
     return new PageResult.Back();
   };
 
   public static final Page mainMenu = new MenuPage("Admin", "Log out", List.of(
-      new MenuItem("Show Profile", CommonPages.showProfile),
-      new MenuItem("Change User Name", CommonPages.editProfile),
+      new MenuItem("Profile Page", CommonPages.profile),
       new MenuItem("Add a Station", addStation),
       new MenuItem("Add a Train", addTrain)));
 }

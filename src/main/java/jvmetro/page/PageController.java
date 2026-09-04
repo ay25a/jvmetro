@@ -6,23 +6,22 @@ import java.util.Objects;
 
 public class PageController {
   ArrayDeque<Page> stack;
-  PageContext context;
+  Scanner scanner;
 
-  public PageController(PageContext ctx, Page startingPage) {
+  public PageController(Page startingPage) {
     Objects.requireNonNull(startingPage, "Starting Page cannot be null!");
 
     stack = new ArrayDeque<>();
     stack.push(startingPage);
-
-    this.context = Objects.requireNonNullElse(ctx, new PageContext(System.out, new Scanner(System.in)));
+    this.scanner = new Scanner(System.in);
   }
 
   public void run() {
     while (!stack.isEmpty()) {
       Page page = stack.peek();
 
-      context.output.println();
-      PageResult res = page.show(context);
+      System.out.println();
+      PageResult res = page.show(scanner);
 
       switch (res) {
         case PageResult.Next next:
@@ -43,6 +42,6 @@ public class PageController {
       }
     }
 
-    context.scanner.close();
+    this.scanner.close();
   }
 }

@@ -16,6 +16,5 @@ import java.util.List;
 
 public class PassengerPages {
   public static final Page mainMenu = new MenuPage("Passenger", "Log out", List.of(
-      new MenuItem("Show Profile", CommonPages.showProfile),
-      new MenuItem("Change User Name", CommonPages.editProfile)));
+      new MenuItem("Profile Page", CommonPages.profile)));
 }

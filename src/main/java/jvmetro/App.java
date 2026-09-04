@@ -1,35 +1,41 @@
 package jvmetro;
 
-import jvmetro.repository.FileManager;
 import jvmetro.repository.TextFileManager;
-import jvmetro.service.UserService;
 import java.io.IOException;
 
 import jvmetro.page.PageController;
 import jvmetro.cli.CommonPages;
 
 public class App {
-  private AppContext context;
-
   App() throws IOException {
-    FileManager fm = new TextFileManager();
-    this.context = new AppContext(fm, new UserService(fm));
+    AppContext.createContext(new TextFileManager());
   }
 
   private void run() {
-    PageController controller = new PageController(context, CommonPages.introduction);
+    PageController controller = new PageController(CommonPages.introduction);
     controller.run();
   }
 
-  private void saveAll() throws IOException {
-    context.getUserService().saveUsers(context.getFileManager());
+  private void saveAll() {
+    AppContext scanner = AppContext.getContext();
+    try {
+      scanner.getUserService().saveUsers(scanner.getFileManager());
+      scanner.getStationService().saveStations(scanner.getFileManager());
+      scanner.getTrainService().saveTrains(scanner.getFileManager());
+      scanner.getRouteService().saveRoutes(scanner.getFileManager());
+    } catch (IOException e) {
+      System.err.println(e.getMessage());
+    }
   }
- 
+
   public static void main(String[] args) {
     try {
       App app = new App();
       app.run();
-      app.saveAll();
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        System.out.println("Shutting down... saving state.");
+        app.saveAll();
+      }));
     } catch (IOException ex) {
       System.err.println("Failed to Start the Application");
       System.err.println(ex.getMessage());

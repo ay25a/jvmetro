@@ -1,5 +1,5 @@
 package jvmetro.page;
 
-public interface Page{
-  public PageResult show(PageContext context);
+public interface Page {
+  public PageResult show(java.util.Scanner scanner);
 }

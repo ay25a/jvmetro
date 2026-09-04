@@ -18,16 +18,16 @@ public class MenuPage implements Page {
     this.menuBack = Objects.requireNonNullElse(menuBackMessage, "Back");
   }
 
-  public PageResult show(PageContext ctx) {
-    ctx.output.printf("===== %s =====\n", title);
+  public PageResult show(java.util.Scanner scanner) {
+    System.out.printf("===== %s =====\n", title);
 
     for (int i = 0; i < items.size(); ++i)
-      ctx.output.printf("(%d) %s\n", i + 1, items.get(i).name());
-    ctx.output.printf("(%d) %s\n", items.size() + 1, menuBack);
+      System.out.printf("(%d) %s\n", i + 1, items.get(i).name());
+    System.out.printf("(%d) %s\n", items.size() + 1, menuBack);
 
     try {
-      ctx.output.print("> ");
-      int choice = Integer.parseInt(ctx.scanner.nextLine());
+      System.out.print("> ");
+      int choice = Integer.parseInt(scanner.nextLine());
 
       if (choice == items.size() + 1)
         return new PageResult.Back();
