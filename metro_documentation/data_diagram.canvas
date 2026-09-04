@@ -1,0 +1,15 @@
+{
+	"nodes":[
+		{"id":"4644b869a16a7d31","type":"text","text":"User","x":-880,"y":-620,"width":250,"height":60},
+		{"id":"c35b9a1e4b4d17e3","type":"text","text":"Station","x":-1320,"y":-620,"width":250,"height":60},
+		{"id":"38a36c7b3547cd01","type":"text","text":"Train","x":-1625,"y":-620,"width":250,"height":60},
+		{"id":"e851920fffde562a","type":"text","text":"Route","x":-1625,"y":-440,"width":250,"height":60},
+		{"id":"c76aff468613b6b2","type":"text","text":"Ticket","x":-880,"y":-300,"width":250,"height":60}
+	],
+	"edges":[
+		{"id":"ca78b16e02561e54","fromNode":"38a36c7b3547cd01","fromSide":"bottom","toNode":"e851920fffde562a","toSide":"top"},
+		{"id":"5aa96dfa22944872","fromNode":"e851920fffde562a","fromSide":"right","toNode":"c35b9a1e4b4d17e3","toSide":"bottom"},
+		{"id":"6beb1a811de6196a","fromNode":"c76aff468613b6b2","fromSide":"top","toNode":"4644b869a16a7d31","toSide":"bottom"},
+		{"id":"c24e28d9e5069b7d","fromNode":"c76aff468613b6b2","fromSide":"left","toNode":"c35b9a1e4b4d17e3","toSide":"bottom"}
+	]
+}
