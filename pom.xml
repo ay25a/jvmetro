@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>jvmetro</groupId>
@@ -43,7 +43,7 @@
   </dependencies>
 
   <build>
-    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+    <pluginManagement>      <!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>
         <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
         <plugin>
@@ -83,6 +83,38 @@
         <plugin>
           <artifactId>maven-project-info-reports-plugin</artifactId>
           <version>3.6.1</version>
+        </plugin>
+        <plugin>
+          <groupId>de.elnarion.maven</groupId>
+          <artifactId>plantuml-generator-maven-plugin</artifactId>
+          <version>3.0.1</version>
+          <executions>
+            <execution>
+              <id>generate-puml</id>
+              <!-- Hooking into test-compile ensures all main classes are compiled -->
+              <phase>test-compile</phase>
+              <goals>
+                <goal>generate</goal>
+              </goals>
+              <configuration>
+                <outputFilename>all-packages-architecture.puml</outputFilename>
+                <!-- Forces it to drop the file right where your pom.xml is -->
+                <outputDirectory>${project.basedir}</outputDirectory>
+
+                <scanPackages>
+                  <!-- 
+                      CRITICAL: If your packages are com.app.user, com.app.order, etc., 
+                      just put the base parent package "com.app". It will scan all sub-packages!
+                    -->
+                  <scanPackage>YOUR_BASE_COMMON_PACKAGE</scanPackage>
+                </scanPackages>
+
+                <!-- Keeps terminal execution verbose so we can see what it's doing -->
+                <hideFields>false</hideFields>
+                <hideMethods>false</hideMethods>
+              </configuration>
+            </execution>
+          </executions>
         </plugin>
       </plugins>
     </pluginManagement>

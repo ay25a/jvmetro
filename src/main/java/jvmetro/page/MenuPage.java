@@ -9,13 +9,13 @@ public class MenuPage implements Page {
   private final String title;
   private final String menuBack;
 
-  public MenuPage(String title, String menuBackMessage, List<MenuItem> items) {
+  public MenuPage(List<MenuItem> items, String title, String back) {
     if (items == null || items.isEmpty())
       throw new IllegalArgumentException("MenuPage has to contain at least one item!");
 
     this.items = new ArrayList<>(items);
-    this.title = Objects.requireNonNullElse(title, "Menu");
-    this.menuBack = Objects.requireNonNullElse(menuBackMessage, "Back");
+    this.title = Objects.requireNonNullElse(title, "Menu");;
+    this.menuBack = Objects.requireNonNullElse(back, "Back");
   }
 
   public PageResult show(java.util.Scanner scanner) {

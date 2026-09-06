@@ -67,4 +67,8 @@ public sealed class User permits Passenger, Admin {
   public String getEmail() {
     return email;
   }
+  
+  public UserRole getRole(){
+    return role;
+  }
 }

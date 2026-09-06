@@ -1,81 +1,115 @@
 package jvmetro.model;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
 public class Ticket {
-  private String ticketID;
-  private String passengerName;
-  private String routeID;
-  private TicketType ticketType;
+  private final int ticketID;
+  private final String passengerName;
+  private final String srcStation;
+  private final String destStation;
+  private final LocalDate issueDate;
+  private final TicketType ticketType;
   private TicketStatus ticketStatus;
-  private double fare;
+  private final double fare;
 
-  public Ticket(String id, String passengerName, String routeID, TicketType ticketType, TicketStatus ticketStatus,
-      double fare) throws IllegalArgumentException {
-    if (id.isBlank() || passengerName.isBlank() || routeID.isBlank() || ticketType == null || ticketStatus == null
-        || fare < 0)
-      throw new IllegalArgumentException("Ticket cannot be created; Invalid Values");
+  public Ticket(
+      int ticketID,
+      String passengerName,
+      String srcStation,
+      String destStation,
+      TicketType ticketType,
+      TicketStatus ticketStatus,
+      double fare,
+      LocalDate issueDate) throws IllegalArgumentException {
 
-    this.ticketID = id;
+    if (passengerName.isBlank()
+        || srcStation.isBlank() || destStation.isBlank()
+        || ticketType == null
+        || ticketStatus == null
+        || issueDate == null
+        || fare < 0) {
+
+      throw new IllegalArgumentException("Invalid Ticket Values!");
+    }
+
+    this.ticketID = ticketID;
     this.passengerName = passengerName;
-    this.routeID = routeID;
+    this.srcStation = srcStation;
+    this.destStation = destStation;
     this.ticketType = ticketType;
     this.ticketStatus = ticketStatus;
     this.fare = fare;
+    this.issueDate = issueDate;
   }
 
   public static Ticket from(HashMap<String, String> map) throws DeserializationException {
     try {
       return new Ticket(
-          map.get("ticketID"),
+          Integer.parseInt(map.get("ticketID")),
           map.get("passengerName"),
-          map.get("routeID"),
+          map.get("srcStation"),
+          map.get("destStation"),
           TicketType.valueOf(map.get("ticketType")),
           TicketStatus.valueOf(map.get("ticketStatus")),
-          Double.parseDouble(map.get("fare")));
-    } catch (NullPointerException ex) {
-      throw new DeserializationException("Ticket cannot be loaded; required fields are missing!");
-    } catch (IllegalArgumentException ex) {
-      throw new DeserializationException("Ticket cannot be loaded; incorrect field values!");
+          Double.parseDouble(map.get("fare")),
+          LocalDate.parse(map.get("issueDate")));
+
+    } catch (NullPointerException | IllegalArgumentException ex) {
+      throw new DeserializationException("Ticket is Corrupted!");
     }
   }
 
   public HashMap<String, String> serialize() {
-    return new HashMap<String, String>(Map.of(
-        "ticketID", ticketID,
+    return new HashMap<>(Map.of(
+        "ticketID", String.valueOf(ticketID),
         "passengerName", passengerName,
-        "routeID", routeID,
+        "srcStation", srcStation,
+        "destStation", destStation,
         "ticketType", ticketType.name(),
         "ticketStatus", ticketStatus.name(),
-        "fare", String.valueOf(fare)));
+        "fare", String.valueOf(fare),
+        "issueDate", issueDate.toString()));
   }
 
   public void cancelTicket() {
     this.ticketStatus = TicketStatus.CANCELLED;
   }
 
-  public String getID() {
-    return this.ticketID;
+  public void useTicket() {
+    this.ticketStatus = TicketStatus.USED;
+  }
+
+  public int getID() {
+    return ticketID;
   }
 
   public String getPassenger() {
-    return this.passengerName;
+    return passengerName;
   }
 
-  public String getRouteID() {
-    return this.routeID;
+  public String getSrcStation() {
+    return srcStation;
+  }
+
+  public String getDestStation() {
+    return destStation;
+  }
+
+  public LocalDate getIssueDate() {
+    return issueDate;
   }
 
   public double getFare() {
-    return this.fare;
+    return fare;
   }
 
   public TicketType getTicketType() {
-    return this.ticketType;
+    return ticketType;
   }
 
   public TicketStatus getTicketStatus() {
-    return this.ticketStatus;
+    return ticketStatus;
   }
 }

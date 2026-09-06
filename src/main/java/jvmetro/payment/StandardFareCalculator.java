@@ -16,6 +16,6 @@ public class StandardFareCalculator implements FareCalculator {
 
   @Override
   public double calculateFare(Route route, TicketType type) {
-    return route.getDistance() * RATE_PER_KM * TYPE_MULTIPLIER.get(type);
+    return route.distanceKM() * RATE_PER_KM * TYPE_MULTIPLIER.get(type);
   }
 }
