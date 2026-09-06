@@ -1,13 +1,12 @@
 package jvmetro.model;
 
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 public sealed class User permits Passenger, Admin {
-  private static final String EMAIL_REGEX = "^(?=.{1,64}@)[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*@" +
-      "[^-][A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$";
-  private static final Pattern EMAIL_PATTERN = Pattern.compile(EMAIL_REGEX);
+  private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\s@]+@[^\s@]+\\.[^\s@]+$");
 
   private String name;
   private final String email;
@@ -15,42 +14,48 @@ public sealed class User permits Passenger, Admin {
   private final UserRole role;
 
   public User(String name, String email, String password, UserRole role) throws IllegalArgumentException {
-    if (name.isBlank() || email.isBlank() || password.isBlank() || role == null)
-      throw new IllegalArgumentException("User cannot be created; Invalid Values");
-
+    if (name.isBlank())
+      throw new IllegalArgumentException("Name cannot be empty!");
     if (!EMAIL_PATTERN.matcher(email).matches())
-      throw new IllegalArgumentException("Email format is invalid!");
-
+      throw new IllegalArgumentException("Email is invalid!");
     if (password.length() < 3)
       throw new IllegalArgumentException("Password should be at least 3 characters!");
 
     this.name = name;
     this.email = email;
     this.password = password;
-    this.role = role;
+    this.role = Objects.requireNonNull(role, "UserRole cannot be null");
   }
 
+  // Create a User from a map
   public static User from(HashMap<String, String> map) throws DeserializationException {
     try {
-      if (UserRole.valueOf(map.get("role")) == UserRole.ADMIN)
-        return new Admin(map.get("name"), map.get("email"), map.get("password"));
+      String name = map.get("name");
+      String email = map.get("email");
+      String password = map.get("password");
+      UserRole role = UserRole.valueOf(map.get("role"));
 
-      return new Passenger(map.get("name"), map.get("email"), map.get("password"), Double.valueOf(map.get("balance")));
+      if (role == UserRole.ADMIN)
+        return new Admin(name, email, password);
+      return new Passenger(name, email, password, Double.valueOf(map.get("balance")));
+
     } catch (NullPointerException | IllegalArgumentException ex) {
-      throw new DeserializationException("User is Corrupted!");
+      throw new DeserializationException("Corrupted User Data");
     }
   }
 
+  // Converts the User to a map to store it later
   public HashMap<String, String> serialize() {
-    return new HashMap<String, String>(Map.of(
-        "name", name,
-        "email", email,
-        "password", password,
-        "role", role.name()));
+    HashMap<String, String> parsed = new HashMap<>();
+    parsed.putAll(Map.of("name", name, "email", email));
+    parsed.putAll(Map.of("password", password, "role", role.name()));
+
+    return parsed;
   }
 
+  // Test if email and password matches
   public boolean login(String email, String password) {
-    return (this.email.equalsIgnoreCase(email) && this.password.equals(password));
+    return this.email.equalsIgnoreCase(email) && this.password.equals(password);
   }
 
   public String getName() {
@@ -60,15 +65,14 @@ public sealed class User permits Passenger, Admin {
   public void setName(String name) throws IllegalArgumentException {
     if (name.isBlank())
       throw new IllegalArgumentException("Name cannot be empty!");
-
     this.name = name;
   }
 
   public String getEmail() {
     return email;
   }
-  
-  public UserRole getRole(){
+
+  public UserRole getRole() {
     return role;
   }
 }

@@ -10,23 +10,26 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class StationService {
-  private ArrayList<Station> stations;
+  private final ArrayList<Station> stations;
 
-  public StationService(FileManager fm) {
+  public StationService(FileManager fileManager) {
     stations = new ArrayList<>();
+    ArrayList<HashMap<String, String>> loaded = new ArrayList<>();
 
     try {
-      ArrayList<HashMap<String, String>> parsed = fm.readData("stations");
+      loaded = fileManager.readData("stations");
+    } catch (IOException | FileProcessingException ex) {
+      System.err.println("Failed to load stations from a file: " + ex.getMessage());
+      return;
+    }
 
-      for (HashMap<String, String> map : parsed) {
-        try {
-          stations.add(Station.from(map));
-        } catch (DeserializationException e) {
-          System.err.println("Station cannot be loaded:: " + e.getMessage());
-        }
+    for (HashMap<String, String> parsed : loaded) {
+      try {
+        stations.add(Station.from(parsed));
+
+      } catch (DeserializationException ex) {
+        System.err.println("A station cannot be loaded: " + ex.getMessage());
       }
-    } catch (IOException | FileProcessingException e) {
-      System.err.println("Stations will not be loaded:: " + e.getMessage());
     }
   }
 
@@ -38,17 +41,12 @@ public class StationService {
   }
 
   public Station getStation(String stationName) throws EntryNotFoundException {
-    Station station = null;
-
     for (Station st : stations) {
       if (st.name().equals(stationName))
-        station = st;
+        return st;
     }
 
-    if (station == null)
-      throw new EntryNotFoundException("Station does not Exist!");
-
-    return station;
+    throw new EntryNotFoundException("Station does not Exist!");
   }
 
   public void addStation(Station newStation) throws DuplicateEntryException {

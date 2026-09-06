@@ -4,112 +4,85 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
-
-import jvmetro.model.Ticket;
-import jvmetro.model.TicketType;
-import jvmetro.model.TicketStatus;
 import jvmetro.model.DeserializationException;
-import jvmetro.model.Route;
+import jvmetro.model.InsufficientBalanceException;
 import jvmetro.model.Passenger;
-import jvmetro.repository.FileManager;
-import jvmetro.repository.FileProcessingException;
+import jvmetro.model.Route;
+import jvmetro.model.Ticket;
+import jvmetro.model.TicketStatus;
+import jvmetro.model.TicketType;
+import jvmetro.payment.DiscountedFareCalculator;
 import jvmetro.payment.FareCalculator;
 import jvmetro.payment.StandardFareCalculator;
-import jvmetro.payment.DiscountedFareCalculator;
-import jvmetro.model.InsufficientBalanceException;
+import jvmetro.repository.FileManager;
+import jvmetro.repository.FileProcessingException;
 
 public class TicketService {
+
   private final ArrayList<Ticket> tickets;
-  private FareCalculator fareCalculator;
-  private ArrayList<Ticket> passengerTickets;
   private int nextTicketID;
 
-  public TicketService(FileManager fm, Passenger passenger) {
+  public TicketService(FileManager fileManager, UserService userService) {
     this.tickets = new ArrayList<>();
-    this.passengerTickets = new ArrayList<>();
     this.nextTicketID = 1;
 
-    try {
-      ArrayList<HashMap<String, String>> parsed = fm.readData("tickets");
+    ArrayList<HashMap<String, String>> loaded = new ArrayList<>();
 
-      for (HashMap<String, String> map : parsed) {
-        try {
-          Ticket ticket = Ticket.from(map);
+    try {
+      loaded = fileManager.readData("tickets");
+    } catch (IOException | FileProcessingException ex) {
+      System.err.println(
+          "Failed to load trains from a file: " + ex.getMessage());
+      return;
+    }
+
+    for (HashMap<String, String> parsed : loaded) {
+      try {
+        Ticket ticket = updateTicket(userService, Ticket.from(parsed));
+        if (ticket != null)
           tickets.add(ticket);
 
-          int id = ticket.getID();
-          if (id >= nextTicketID) {
-            nextTicketID = id + 1;
-          }
-        } catch (DeserializationException ex) {
-          System.err.println("Skipping loading a ticket: " + ex.getMessage());
-        }
+        int id = ticket.getID();
+        if (id >= nextTicketID)
+          nextTicketID = id + 1;
+      } catch (DeserializationException ex) {
+        System.err.println("A train cannot be loaded: " + ex.getMessage());
       }
-
-      if (passenger != null)
-        loadPassenger(passenger);
-
-    } catch (IOException | FileProcessingException ex) {
-      System.err.println("Tickets cannot be loaded: " + ex.getMessage());
     }
   }
 
-  public void loadPassenger(Passenger passenger) {
-    passengerTickets = new ArrayList<>();
-
-    for (Ticket ticket : tickets) {
-      if (ticket.getPassenger().equals(passenger.getEmail())) {
-        passengerTickets.add(ticket);
-      }
-    }
-
-    if (passengerTickets.size() >= 10) {
-      fareCalculator = new DiscountedFareCalculator();
-    } else {
-      fareCalculator = new StandardFareCalculator();
-    }
-  }
-
-  public void updateTickets(UserService service) {
-    ArrayList<Ticket> toRemove = new ArrayList<>();
+  public Ticket updateTicket(UserService userService, Ticket ticket) {
     LocalDate today = LocalDate.now();
+    if (ticket.getStatus() != TicketStatus.ACTIVE || ticket.getType() == TicketType.SINGLE)
+      return ticket;
 
-    for (Ticket ticket : tickets) {
-      if (ticket.getTicketStatus() != TicketStatus.ACTIVE
-          || ticket.getTicketType() == TicketType.SINGLE)
-        continue;
+    if (ticket.getIssueDate().equals(today))
+      return ticket;
 
-      if (ticket.getIssueDate().equals(today))
-        continue;
+    if (ticket.getType() == TicketType.MONTHLY && today.isBefore(ticket.getIssueDate().plusMonths(1)))
+      return ticket;
 
-      if (ticket.getTicketType() == TicketType.MONTHLY
-          && today.isBefore(ticket.getIssueDate().plusMonths(1)))
-        continue;
+    try {
+      Passenger passenger = (Passenger) userService.getUser(ticket.getPassenger());
+      passenger.deductBalance(ticket.getFare());
 
-      try {
-        Passenger passenger = (Passenger) service.getUser(ticket.getPassenger());
-        passenger.deductBalance(ticket.getFare());
+      Ticket renewedTicket = new Ticket(
+          nextTicketID++,
+          ticket.getPassenger(),
+          ticket.getSrcStation(),
+          ticket.getDestStation(),
+          ticket.getType(),
+          ticket.getStatus(),
+          ticket.getFare(),
+          today);
 
-        Ticket renewedTicket = new Ticket(
-            nextTicketID++,
-            ticket.getPassenger(),
-            ticket.getSrcStation(),
-            ticket.getDestStation(),
-            ticket.getTicketType(),
-            ticket.getTicketStatus(),
-            ticket.getFare(),
-            today);
-
-        tickets.add(renewedTicket);
-
-      } catch (EntryNotFoundException | ClassCastException ex) {
-        toRemove.add(ticket);
-      } catch (InsufficientBalanceException ex) {
-        ticket.cancelTicket();
-      }
+      return renewedTicket;
+    } catch (EntryNotFoundException | ClassCastException ex) {
+      return null;
+    } catch (InsufficientBalanceException ex) {
+      ticket.cancelTicket();
+      return ticket;
     }
-
-    tickets.removeAll(toRemove);
   }
 
   public void saveTickets(FileManager fm) throws IOException {
@@ -122,11 +95,14 @@ public class TicketService {
     fm.writeData("tickets", parsed);
   }
 
+  public double calculateFare(Route route, TicketType ticketType) {
+    FareCalculator fareCalculator = route.distanceKM() < 100 ? new StandardFareCalculator()
+        : new DiscountedFareCalculator();
+    return fareCalculator.calculateFare(route, ticketType);
+  }
+
   public Ticket addTicket(Passenger passenger, Route route, TicketType ticketType) throws InsufficientBalanceException {
-    loadPassenger(passenger);
-
-    double fare = fareCalculator.calculateFare(route, ticketType);
-
+    double fare = calculateFare(route, ticketType);
     passenger.deductBalance(fare);
 
     Ticket ticket = new Ticket(
@@ -140,20 +116,24 @@ public class TicketService {
         LocalDate.now());
 
     tickets.add(ticket);
-    passengerTickets.add(ticket);
-
     return ticket;
   }
 
-  public Ticket[] getPassengerTickets() {
-    return passengerTickets.toArray(new Ticket[0]);
+  public ArrayList<Ticket> getPassengerTickets(Passenger passenger) {
+    ArrayList<Ticket> tickets = new ArrayList<>();
+
+    for (Ticket ticket : this.tickets) {
+      if (ticket.getPassenger().equals(passenger.getEmail()))
+        tickets.add(ticket);
+    }
+
+    return tickets;
   }
 
   public Ticket findTicket(int ticketID) throws EntryNotFoundException {
     for (Ticket ticket : tickets) {
-      if (ticket.getID() == ticketID) {
+      if (ticket.getID() == ticketID)
         return ticket;
-      }
     }
 
     throw new EntryNotFoundException("Ticket not found: " + ticketID);
@@ -163,7 +143,12 @@ public class TicketService {
     return tickets.toArray(new Ticket[0]);
   }
 
-  public FareCalculator getFareCalculator() {
-    return this.fareCalculator;
+  public Ticket getTicket(int id, Passenger passenger) throws EntryNotFoundException {
+    for (Ticket ti : tickets) {
+      if (ti.getID() == id && ti.getPassenger().equals(passenger.getEmail()))
+        return ti;
+    }
+
+    throw new EntryNotFoundException("Ticket ID was not Found!");
   }
 }

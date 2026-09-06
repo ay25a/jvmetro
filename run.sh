@@ -1,1 +1,1 @@
-mvn exec:java -Dexec.mainClass="jvmetro.App"
+mvn exec:java -Dexec.mainClass="jvmetro.Main"

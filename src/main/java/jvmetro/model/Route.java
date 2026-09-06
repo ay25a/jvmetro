@@ -11,18 +11,22 @@ public record Route(int id, String srcStationName, String destStationName, doubl
 
   public static Route from(Map<String, String> map) throws DeserializationException {
     try {
-      return new Route(Integer.parseInt(map.get("id")), map.get("src"), map.get("dest"),
-          Double.parseDouble(map.get("distance")));
+      int id = Integer.parseInt(map.get("id"));
+      String src = map.get("src");
+      String dest = map.get("dest");
+      double distance = Double.parseDouble(map.get("distance"));
+      return new Route(id, src, dest, distance);
+
     } catch (NullPointerException | IllegalArgumentException e) {
       throw new DeserializationException("Route is Corrupted!");
     }
   }
 
   public HashMap<String, String> serialize() {
-    return new HashMap<String, String>(Map.of(
-          "id", String.valueOf(id), 
-          "src", srcStationName, 
-          "dest", destStationName, 
-          "distance", String.valueOf(distanceKM)));
+    HashMap<String, String> parsed = new HashMap<>();
+    parsed.putAll(Map.of("id", String.valueOf(id), "src", srcStationName));
+    parsed.putAll(Map.of("dest", destStationName, "distance", String.valueOf(distanceKM)));
+
+    return parsed;
   }
 }

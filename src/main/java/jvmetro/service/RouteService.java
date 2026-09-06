@@ -11,23 +11,26 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class RouteService {
-  private ArrayList<Route> routes;
+  private final ArrayList<Route> routes;
 
-  public RouteService(FileManager fm) {
+  public RouteService(FileManager fileManager) {
     routes = new ArrayList<>();
+    ArrayList<HashMap<String, String>> loaded = new ArrayList<>();
 
     try {
-      ArrayList<HashMap<String, String>> parsed = fm.readData("routes");
+      loaded = fileManager.readData("routes");
+    } catch (IOException | FileProcessingException ex) {
+      System.err.println("Failed to load routes from a file: " + ex.getMessage());
+      return;
+    }
 
-      for (HashMap<String, String> map : parsed) {
-        try {
-          routes.add(Route.from(map));
-        } catch (DeserializationException e) {
-          System.err.println("Route will be skipped: " + e.getMessage());
-        }
+    for (HashMap<String, String> parsed : loaded) {
+      try {
+        routes.add(Route.from(parsed));
+
+      } catch (DeserializationException ex) {
+        System.err.println("A route cannot be loaded: " + ex.getMessage());
       }
-    } catch (IOException | FileProcessingException e) {
-      System.err.println("Routes will not be loaded: " + e.getMessage());
     }
   }
 
@@ -57,11 +60,11 @@ public class RouteService {
     }
 
     for (Route route : routes) {
-      if(first != null && first.equals(route.srcStationName()))
+      if (first != null && first.equals(route.srcStationName()))
         break;
 
       if (route.srcStationName().equals(from)) {
-        if(first == null)
+        if (first == null)
           first = route.srcStationName();
         double remainingDistance = findDistance(first, route.destStationName(), to);
 
@@ -76,7 +79,7 @@ public class RouteService {
   public Route findRoute(Station src, Station dest) throws EntryNotFoundException {
     double distance = findDistance(null, src.name(), dest.name());
 
-    if(distance == -1)
+    if (distance == -1)
       throw new EntryNotFoundException("Route doesn't Exist!");
 
     return new Route(1, src.name(), dest.name(), distance);

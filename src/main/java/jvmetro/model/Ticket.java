@@ -5,41 +5,44 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Ticket {
+
   private final int ticketID;
-  private final String passengerName;
+  private final String passengerEmail;
   private final String srcStation;
   private final String destStation;
   private final LocalDate issueDate;
-  private final TicketType ticketType;
-  private TicketStatus ticketStatus;
+  private final TicketType type;
   private final double fare;
+  private TicketStatus status;
 
   public Ticket(
-      int ticketID,
-      String passengerName,
-      String srcStation,
-      String destStation,
-      TicketType ticketType,
-      TicketStatus ticketStatus,
-      double fare,
-      LocalDate issueDate) throws IllegalArgumentException {
-
-    if (passengerName.isBlank()
-        || srcStation.isBlank() || destStation.isBlank()
-        || ticketType == null
-        || ticketStatus == null
-        || issueDate == null
-        || fare < 0) {
-
+    int ticketID,
+    String passengerEmail,
+    String sourceStation,
+    String destinationStation,
+    TicketType type,
+    TicketStatus status,
+    double fare,
+    LocalDate issueDate
+  ) throws IllegalArgumentException {
+    if (
+      passengerEmail.isBlank() ||
+      sourceStation.isBlank() ||
+      destinationStation.isBlank() ||
+      type == null ||
+      status == null ||
+      issueDate == null ||
+      fare < 0
+    ) {
       throw new IllegalArgumentException("Invalid Ticket Values!");
     }
 
     this.ticketID = ticketID;
-    this.passengerName = passengerName;
-    this.srcStation = srcStation;
-    this.destStation = destStation;
-    this.ticketType = ticketType;
-    this.ticketStatus = ticketStatus;
+    this.passengerEmail = passengerEmail;
+    this.srcStation = sourceStation;
+    this.destStation = destinationStation;
+    this.type = type;
+    this.status = status;
     this.fare = fare;
     this.issueDate = issueDate;
   }
@@ -47,38 +50,36 @@ public class Ticket {
   public static Ticket from(HashMap<String, String> map) throws DeserializationException {
     try {
       return new Ticket(
-          Integer.parseInt(map.get("ticketID")),
-          map.get("passengerName"),
-          map.get("srcStation"),
-          map.get("destStation"),
-          TicketType.valueOf(map.get("ticketType")),
-          TicketStatus.valueOf(map.get("ticketStatus")),
-          Double.parseDouble(map.get("fare")),
-          LocalDate.parse(map.get("issueDate")));
-
+        Integer.parseInt(map.get("id")),
+        map.get("passenger"),
+        map.get("source_station"),
+        map.get("destination_station"),
+        TicketType.valueOf(map.get("type")),
+        TicketStatus.valueOf(map.get("status")),
+        Double.parseDouble(map.get("fare")),
+        LocalDate.parse(map.get("issue_date"))
+      );
     } catch (NullPointerException | IllegalArgumentException ex) {
       throw new DeserializationException("Ticket is Corrupted!");
     }
   }
 
   public HashMap<String, String> serialize() {
-    return new HashMap<>(Map.of(
-        "ticketID", String.valueOf(ticketID),
-        "passengerName", passengerName,
-        "srcStation", srcStation,
-        "destStation", destStation,
-        "ticketType", ticketType.name(),
-        "ticketStatus", ticketStatus.name(),
-        "fare", String.valueOf(fare),
-        "issueDate", issueDate.toString()));
+    HashMap<String, String> parsed = new HashMap<>();
+    parsed.putAll(Map.of("id", String.valueOf(ticketID), "passenger", passengerEmail));
+    parsed.putAll(Map.of("source_station", srcStation, "destination_station", destStation));
+    parsed.putAll(Map.of("type", type.name(), "status", status.name()));
+    parsed.putAll(Map.of("fare", String.valueOf(fare), "issue_date", issueDate.toString()));
+
+    return parsed;
   }
 
   public void cancelTicket() {
-    this.ticketStatus = TicketStatus.CANCELLED;
+    this.status = TicketStatus.CANCELLED;
   }
 
   public void useTicket() {
-    this.ticketStatus = TicketStatus.USED;
+    this.status = TicketStatus.USED;
   }
 
   public int getID() {
@@ -86,7 +87,7 @@ public class Ticket {
   }
 
   public String getPassenger() {
-    return passengerName;
+    return passengerEmail;
   }
 
   public String getSrcStation() {
@@ -105,11 +106,11 @@ public class Ticket {
     return fare;
   }
 
-  public TicketType getTicketType() {
-    return ticketType;
+  public TicketType getType() {
+    return type;
   }
 
-  public TicketStatus getTicketStatus() {
-    return ticketStatus;
+  public TicketStatus getStatus() {
+    return status;
   }
 }

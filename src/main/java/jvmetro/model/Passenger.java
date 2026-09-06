@@ -7,7 +7,6 @@ public final class Passenger extends User {
 
   public Passenger(String name, String email, String password, double balance) throws IllegalArgumentException {
     super(name, email, password, UserRole.PASSENGER);
-
     if (balance < 0.0)
       throw new IllegalArgumentException("Passenger cannot have negative balance!");
 
@@ -17,24 +16,23 @@ public final class Passenger extends User {
   @Override
   public HashMap<String, String> serialize() {
     HashMap<String, String> map = super.serialize();
-
     map.put("balance", String.valueOf(balance));
+
     return map;
   }
 
   public void deductBalance(double amount) throws InsufficientBalanceException, IllegalArgumentException {
     if (amount < 0.0)
-      throw new IllegalArgumentException("Cannot deduct a negative amount!");
-
+      throw new IllegalArgumentException("Cannot deduct a negative amount from Balance!");
     if (amount > balance)
-      throw new InsufficientBalanceException("Insufficient Balance!");
+      throw new InsufficientBalanceException("Cannot Deduct Balance: Needed " + amount + ", Exist: " + balance);
 
     this.balance -= amount;
   }
 
-  public void topupBalance(double amount) throws IllegalArgumentException {
+  public void addBalance(double amount) throws IllegalArgumentException {
     if (amount < 0.0)
-      throw new IllegalArgumentException("Cannot top up a negative amount!");
+      throw new IllegalArgumentException("Cannot add a negative amount to the Balance!");
 
     this.balance += amount;
   }

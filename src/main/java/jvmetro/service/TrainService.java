@@ -10,23 +10,26 @@ import jvmetro.repository.FileManager;
 import jvmetro.repository.FileProcessingException;
 
 public class TrainService {
-  private ArrayList<Train> trains;
+  private final ArrayList<Train> trains;
 
-  public TrainService(FileManager fm) {
+  public TrainService(FileManager fileManager) {
     trains = new ArrayList<>();
+    ArrayList<HashMap<String, String>> loaded = new ArrayList<>();
 
     try {
-      ArrayList<HashMap<String, String>> parsed = fm.readData("trains");
-
-      for (HashMap<String, String> map : parsed) {
-        try {
-          trains.add(Train.from(map));
-        } catch (DeserializationException ex) {
-          System.err.println("Train cannot be loaded: " + ex.getMessage());
-        }
-      }
+      loaded = fileManager.readData("trains");
     } catch (IOException | FileProcessingException ex) {
-      System.err.println("Trains will not be loaded: " + ex.getMessage());
+      System.err.println("Failed to load trains from a file: " + ex.getMessage());
+      return;
+    }
+
+    for (HashMap<String, String> parsed : loaded) {
+      try {
+        trains.add(Train.from(parsed));
+
+      } catch (DeserializationException ex) {
+        System.err.println("A train cannot be loaded: " + ex.getMessage());
+      }
     }
   }
 
@@ -37,24 +40,20 @@ public class TrainService {
     fm.writeData("trains", parsed);
   }
 
-  public Train getTrain(String trainName) throws EntryNotFoundException {
-    Train train = null;
-    for(Train tr: trains){
-      if(tr.name().equals(trainName))
-        train = tr;
+  private Train getTrain(String trainName) throws EntryNotFoundException {
+    for (Train tr : trains) {
+      if (tr.name().equals(trainName))
+        return tr;
     }
 
-    if(train == null)
-      throw new EntryNotFoundException("Train doesn't Exist!");
-
-    return train;
+    throw new EntryNotFoundException("Train doesn't Exist!");
   }
 
   public void addTrain(Train train) throws DuplicateEntryException {
-    try{
+    try {
       getTrain(train.name());
       throw new DuplicateEntryException("Train already Exists!");
-    }catch(EntryNotFoundException ex){
+    } catch (EntryNotFoundException ex) {
       trains.add(train);
     }
   }

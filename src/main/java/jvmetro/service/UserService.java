@@ -10,55 +10,58 @@ import jvmetro.repository.FileManager;
 import jvmetro.repository.FileProcessingException;
 
 public class UserService {
-  private HashMap<String, User> users;
+  private final HashMap<String, User> users;
 
-  public UserService(FileManager fm) {
+  // Load all users using the FileManager
+  public UserService(FileManager fileManager) {
     users = new HashMap<>();
+    ArrayList<HashMap<String, String>> loaded = new ArrayList<>();
 
     try {
-      ArrayList<HashMap<String, String>> parsed = fm.readData("users");
-
-      for (HashMap<String, String> map : parsed) {
-        try {
-          User user = User.from(map);
-          users.put(user.getEmail(), user);
-        } catch (DeserializationException ex) {
-          System.err.println("Skipping Loading a User: " + ex.getMessage());
-        }
-      }
+      loaded = fileManager.readData("users");
     } catch (IOException | FileProcessingException ex) {
-      System.err.println("Users will be loaded empty; " + ex.getMessage());
+      System.err.println("Failed to load users from a file: " + ex.getMessage());
+      return;
+    }
+
+    for (HashMap<String, String> parsed : loaded) {
+      try {
+        User user = User.from(parsed);
+        users.put(user.getEmail(), user);
+      } catch (DeserializationException ex) {
+        System.err.println("A user cannot be loaded: " + ex.getMessage());
+      }
     }
   }
 
-  public void saveUsers(FileManager fm) throws IOException {
+  // Save all users to a File
+  public void saveUsers(FileManager fileManager) throws IOException {
     ArrayList<HashMap<String, String>> parsed = new ArrayList<>();
+    users.values().forEach(user -> parsed.add(user.serialize()));
 
-    users.forEach((e, user) -> parsed.add(user.serialize()));
-
-    fm.writeData("users", parsed);
+    fileManager.writeData("users", parsed);
   }
 
-  public void addUser(User user) throws DuplicateEntryException {
-    if (users.containsKey(user.getEmail()))
-      throw new DuplicateEntryException("User cannot be added; Duplicate name found for " + user.getName());
+  public User getUser(String email) throws EntryNotFoundException {
+    User user = users.get(email);
 
-    users.put(user.getEmail(), user);
+    if(user != null)
+      return user;
+
+    throw new EntryNotFoundException("User does not exist!");
+  }
+
+  // Add a new user if email doesn't exist already
+  public void addUser(User user) throws DuplicateEntryException {
+    if (users.putIfAbsent(user.getEmail(), user) != null)
+      throw new DuplicateEntryException("User with the same Email already exists!");
   }
 
   public User[] getUsers() {
     return users.values().toArray(User[]::new);
   }
 
-  public User getUser(String email) throws EntryNotFoundException {
-    User user = users.get(email);
-
-    if (user == null)
-      throw new EntryNotFoundException("No user found with the provided email");
-
-    return users.get(email);
-  }
-
+  // Test the email and password for a matching user if any
   public User login(String email, String password) throws InvalidLoginException {
     User user = users.get(email);
 
