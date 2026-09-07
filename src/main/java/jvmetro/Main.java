@@ -18,7 +18,14 @@ public class Main {
     }
 
     MetroApp app = new MetroApp(fileManager);
+    
+    // Save the application data even any time the process ends
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      System.out.println("Shutdown triggered! Saving Application State...");
+
+      app.saveState();
+    }));
+
     app.run();
-    app.saveState();
   }
 }

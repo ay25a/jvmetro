@@ -3,6 +3,7 @@ package jvmetro.model;
 import java.util.HashMap;
 import java.util.Map;
 
+// Using a Record since Station is immutable
 public record Station(String name, String location) {
   public Station {
     if (name.isBlank() || location.isBlank())

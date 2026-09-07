@@ -4,12 +4,14 @@ import java.util.HashMap;
 
 public final class Passenger extends User {
   private double balance;
+  public double getBalance() {
+    return balance;
+  }
 
   public Passenger(String name, String email, String password, double balance) throws IllegalArgumentException {
     super(name, email, password, UserRole.PASSENGER);
     if (balance < 0.0)
       throw new IllegalArgumentException("Passenger cannot have negative balance!");
-
     this.balance = balance;
   }
 
@@ -33,11 +35,6 @@ public final class Passenger extends User {
   public void addBalance(double amount) throws IllegalArgumentException {
     if (amount < 0.0)
       throw new IllegalArgumentException("Cannot add a negative amount to the Balance!");
-
     this.balance += amount;
-  }
-
-  public double getBalance() {
-    return balance;
   }
 }

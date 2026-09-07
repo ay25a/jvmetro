@@ -21,6 +21,7 @@ import jvmetro.service.RouteService;
 import jvmetro.service.StationService;
 import jvmetro.service.TicketService;
 import jvmetro.service.TrainService;
+import jvmetro.model.TicketStatus;
 
 public class PassengerSession {
   private final MetroApp app;
@@ -133,7 +134,10 @@ public class PassengerSession {
         String ticketId = Common.promptInput(scanner, "Ticket ID: ");
         try {
           Ticket ticket = getTicketService().getTicket(Integer.parseInt(ticketId), getPassenger());
-          ticket.useTicket();
+          if (ticket.getStatus() != TicketStatus.ACTIVE)
+            System.out.println("Inactive Tickets cannot be Used!");
+          else if (ticket.getType() == TicketType.SINGLE)
+            ticket.useTicket();
         } catch (EntryNotFoundException | NumberFormatException ex) {
           System.out.println("ID does not correspond to any ticket!");
         }
@@ -141,10 +145,16 @@ public class PassengerSession {
       }
 
       case 2: {
+        System.out
+            .println("Warning: Ticket will not be refunded! Future auto renewals will be cancelled if applicable");
         String ticketId = Common.promptInput(scanner, "Ticket ID: ");
+
         try {
           Ticket ticket = getTicketService().getTicket(Integer.parseInt(ticketId), getPassenger());
-          ticket.cancelTicket();
+          if (ticket.getStatus() != TicketStatus.ACTIVE)
+            System.out.println("Inactive Tickets cannot be cancelled!");
+          else
+            ticket.cancelTicket();
         } catch (EntryNotFoundException | NumberFormatException ex) {
           System.out.println("ID does not correspond to any ticket!");
         }

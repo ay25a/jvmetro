@@ -3,6 +3,7 @@ package jvmetro.model;
 import java.util.HashMap;
 import java.util.Map;
 
+// Using a Record since Route is immutable
 public record Route(int id, String srcStationName, String destStationName, double distanceKM) {
   public Route {
     if (id == 0 || srcStationName.isBlank() || destStationName.isBlank() || distanceKM <= 0.0)

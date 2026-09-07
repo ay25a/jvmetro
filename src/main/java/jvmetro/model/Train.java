@@ -3,6 +3,7 @@ package jvmetro.model;
 import java.util.HashMap;
 import java.util.Map;
 
+// Using a Record since Train is immutable
 public record Train(String name, int capacity) {
   public Train {
     if (name.isBlank() || capacity < 0)

@@ -9,15 +9,36 @@ public sealed class User permits Passenger, Admin {
   private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\s@]+@[^\s@]+\\.[^\s@]+$");
 
   private String name;
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) throws IllegalArgumentException {
+    if (name.isBlank())
+      throw new IllegalArgumentException("New Name Cannot Be Empty!");
+    this.name = name;
+  }
+
   private final String email;
-  private final String password;
+  public String getEmail() {
+    return email;
+  }
+
   private final UserRole role;
+  public UserRole getRole() {
+    return role;
+  }
+
+  private final String password;
 
   public User(String name, String email, String password, UserRole role) throws IllegalArgumentException {
     if (name.isBlank())
       throw new IllegalArgumentException("Name cannot be empty!");
+
+    // Check if email is valid using our compiled regex
     if (!EMAIL_PATTERN.matcher(email).matches())
       throw new IllegalArgumentException("Email is invalid!");
+
     if (password.length() < 3)
       throw new IllegalArgumentException("Password should be at least 3 characters!");
 
@@ -44,7 +65,7 @@ public sealed class User permits Passenger, Admin {
     }
   }
 
-  // Converts the User to a map to store it later
+  // Converts the User to a map to store it in a File
   public HashMap<String, String> serialize() {
     HashMap<String, String> parsed = new HashMap<>();
     parsed.putAll(Map.of("name", name, "email", email));
@@ -56,23 +77,5 @@ public sealed class User permits Passenger, Admin {
   // Test if email and password matches
   public boolean login(String email, String password) {
     return this.email.equalsIgnoreCase(email) && this.password.equals(password);
-  }
-
-  public String getName() {
-    return name;
-  }
-
-  public void setName(String name) throws IllegalArgumentException {
-    if (name.isBlank())
-      throw new IllegalArgumentException("Name cannot be empty!");
-    this.name = name;
-  }
-
-  public String getEmail() {
-    return email;
-  }
-
-  public UserRole getRole() {
-    return role;
   }
 }
