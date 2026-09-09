@@ -13,10 +13,13 @@ public sealed class User permits Passenger, Admin {
     return name;
   }
 
-  public void setName(String name) throws IllegalArgumentException {
+  // try changing the name
+  public boolean setName(String name) {
     if (name.isBlank())
-      throw new IllegalArgumentException("New Name Cannot Be Empty!");
+      return false;
+
     this.name = name;
+    return true;
   }
 
   private final String email;

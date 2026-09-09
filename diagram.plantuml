@@ -1,0 +1,483 @@
+@startuml JVMetro
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+' ========================================================
+' PACKAGE: jvmetro (root)
+' ========================================================
+package "jvmetro" {
+  class Main {
+    + {static} main(args: String[]): void
+  }
+}
+
+' ========================================================
+' PACKAGE: jvmetro.model
+' ========================================================
+package "jvmetro.model" {
+
+  enum UserRole {
+    ADMIN
+    PASSENGER
+  }
+
+  enum TicketStatus {
+    ACTIVE
+    CANCELLED
+    USED
+  }
+
+  enum TicketType {
+    SINGLE
+    DAILY
+    MONTHLY
+  }
+
+  class InsufficientBalanceException extends RuntimeException {
+    + InsufficientBalanceException(message: String)
+  }
+
+  class DeserializationException extends RuntimeException {
+    + DeserializationException(message: String)
+  }
+
+  abstract class User <<sealed>> {
+    - name: String
+    - email: String
+    - password: String
+    - role: UserRole
+    + User(name, email, password, role)
+    + getName(): String
+    + setName(name: String): void
+    + getEmail(): String
+    + getRole(): UserRole
+    + {static} from(map): User
+    + serialize(): HashMap<String,String>
+    + login(email, password): boolean
+  }
+
+  class Passenger extends User {
+    - balance: double
+    + Passenger(name, email, password, balance)
+    + getBalance(): double
+    + serialize(): HashMap<String,String>
+    + deductBalance(amount: double): void
+    + addBalance(amount: double): void
+  }
+
+  class Admin extends User {
+    + Admin(name, email, password)
+  }
+
+  class Station <<record>> {
+    + name: String
+    + location: String
+    + {static} from(map): Station
+    + serialize(): HashMap<String,String>
+  }
+
+  class Route <<record>> {
+    + id: int
+    + srcStationName: String
+    + destStationName: String
+    + distanceKM: double
+    + {static} from(map): Route
+    + serialize(): HashMap<String,String>
+  }
+
+  class Train <<record>> {
+    + name: String
+    + capacity: int
+    + {static} from(map): Train
+    + serialize(): HashMap<String,String>
+  }
+
+  class Ticket {
+    - ticketID: int
+    - passengerEmail: String
+    - srcStation: String
+    - destStation: String
+    - issueDate: LocalDate
+    - type: TicketType
+    - fare: double
+    - status: TicketStatus
+    + Ticket(...)
+    + {static} from(map): Ticket
+    + serialize(): HashMap<String,String>
+    + cancelTicket(): void
+    + useTicket(): void
+    + getID(): int
+    + getPassenger(): String
+    + getSrcStation(): String
+    + getDestStation(): String
+    + getIssueDate(): LocalDate
+    + getFare(): double
+    + getType(): TicketType
+    + getStatus(): TicketStatus
+  }
+
+  User ..> UserRole
+  User ..> DeserializationException
+  Passenger ..> InsufficientBalanceException
+  Station ..> DeserializationException
+  Route ..> DeserializationException
+  Train ..> DeserializationException
+  Ticket ..> TicketType
+  Ticket ..> TicketStatus
+  Ticket ..> DeserializationException
+}
+
+' ========================================================
+' PACKAGE: jvmetro.repository
+' ========================================================
+package "jvmetro.repository" {
+
+  class FileProcessingException extends RuntimeException {
+    ~ FileProcessingException(message: String)
+  }
+
+  abstract class FileManager {
+    - {static} STORAGE_DIRECTORY: Path
+    + FileManager()
+    + getFilePath(fileName: String): Path
+    # readFile(path: Path): String
+    # writeToFile(path: Path, content: String): void
+    + {abstract} readData(fileName: String): ArrayList<HashMap<String,String>>
+    + {abstract} writeData(fileName: String, data: ArrayList<HashMap<String,String>>): void
+  }
+
+  class TextFileManager extends FileManager {
+    - {static} SEP_NAME: char
+    - {static} SEP_FIELD: char
+    - {static} SEP_RECORD: char
+    + TextFileManager()
+    + getFilePath(fileName: String): Path
+    + readData(fileName: String): ArrayList<HashMap<String,String>>
+    + writeData(fileName: String, data: ArrayList<HashMap<String,String>>): void
+  }
+
+  FileManager ..> FileProcessingException
+}
+
+' ========================================================
+' PACKAGE: jvmetro.payment
+' ========================================================
+package "jvmetro.payment" {
+
+  interface Payment {
+    + pay(amount: double): boolean
+  }
+
+  class CashPayment implements Payment {
+    + pay(amount: double): boolean
+  }
+
+  class CardPayment implements Payment {
+    - cardNumber: String
+    + CardPayment(cardNumber: String)
+    + pay(amount: double): boolean
+  }
+
+  class PaymentService {
+    + processPayment(payment: Payment, amount: double): boolean
+  }
+
+  PaymentService ..> Payment
+
+  interface FareCalculator {
+    + calculateFare(route: Route, type: TicketType): double
+  }
+
+  class StandardFareCalculator implements FareCalculator {
+    - {static} RATE_PER_KM: double
+    - {static} TYPE_MULTIPLIER: Map<TicketType, Double>
+    + calculateFare(route: Route, type: TicketType): double
+  }
+
+  class DiscountedFareCalculator implements FareCalculator {
+    - {static} DISCOUNT_RATE: double
+    - standard: StandardFareCalculator
+    + calculateFare(route: Route, type: TicketType): double
+  }
+
+  DiscountedFareCalculator "1" --> "1" StandardFareCalculator : delegates to
+  FareCalculator ..> jvmetro.model.Route
+  FareCalculator ..> jvmetro.model.TicketType
+}
+
+' ========================================================
+' PACKAGE: jvmetro.service
+' ========================================================
+package "jvmetro.service" {
+
+  class InvalidLoginException extends RuntimeException {
+    + InvalidLoginException(message: String)
+  }
+
+  class EntryNotFoundException extends RuntimeException {
+    + EntryNotFoundException(message: String)
+  }
+
+  class DuplicateEntryException extends RuntimeException {
+    + DuplicateEntryException(message: String)
+  }
+
+  class UserService {
+    - users: HashMap<String, User>
+    + UserService(fileManager: FileManager)
+    + saveUsers(fileManager: FileManager): void
+    + getUser(email: String): User
+    + addUser(user: User): void
+    + getUsers(): User[]
+    + login(email: String, password: String): User
+  }
+
+  class StationService {
+    - stations: ArrayList<Station>
+    + StationService(fileManager: FileManager)
+    + saveStations(fm: FileManager): void
+    + getStation(stationName: String): Station
+    + addStation(newStation: Station): void
+    + getStations(): Station[]
+  }
+
+  class TrainService {
+    - trains: ArrayList<Train>
+    + TrainService(fileManager: FileManager)
+    + saveTrains(fm: FileManager): void
+    - getTrain(trainName: String): Train
+    + addTrain(train: Train): void
+    + getTrains(): Train[]
+  }
+
+  class RouteService {
+    - routes: ArrayList<Route>
+    + RouteService(fileManager: FileManager)
+    + saveRoutes(fm: FileManager): void
+    + addRoute(src: Station, dest: Station, distance: double): void
+    - findDistance(first: String, from: String, to: String): double
+    + findRoute(src: Station, dest: Station): Route
+    + getRoutes(): Route[]
+  }
+
+  class TicketService {
+    - tickets: ArrayList<Ticket>
+    - nextTicketID: int
+    + TicketService(fileManager: FileManager, userService: UserService)
+    + updateTicket(userService: UserService, ticket: Ticket): Ticket
+    + saveTickets(fm: FileManager): void
+    + calculateFare(route: Route, ticketType: TicketType): double
+    + addTicket(passenger: Passenger, route: Route, ticketType: TicketType): Ticket
+    + getPassengerTickets(passenger: Passenger): ArrayList<Ticket>
+    + findTicket(ticketID: int): Ticket
+    + getTickets(): Ticket[]
+    + getTicket(id: int, passenger: Passenger): Ticket
+  }
+
+  UserService ..> jvmetro.repository.FileManager
+  UserService ..> jvmetro.model.User
+  UserService ..> EntryNotFoundException
+  UserService ..> DuplicateEntryException
+  UserService ..> InvalidLoginException
+
+  StationService ..> jvmetro.repository.FileManager
+  StationService ..> jvmetro.model.Station
+  StationService ..> EntryNotFoundException
+  StationService ..> DuplicateEntryException
+
+  TrainService ..> jvmetro.repository.FileManager
+  TrainService ..> jvmetro.model.Train
+  TrainService ..> EntryNotFoundException
+  TrainService ..> DuplicateEntryException
+
+  RouteService ..> jvmetro.repository.FileManager
+  RouteService ..> jvmetro.model.Route
+  RouteService ..> jvmetro.model.Station
+  RouteService ..> EntryNotFoundException
+  RouteService ..> DuplicateEntryException
+
+  TicketService ..> jvmetro.repository.FileManager
+  TicketService --> UserService
+  TicketService ..> jvmetro.model.Ticket
+  TicketService ..> jvmetro.model.Passenger
+  TicketService ..> jvmetro.model.Route
+  TicketService ..> EntryNotFoundException
+  TicketService ..> jvmetro.model.InsufficientBalanceException
+  TicketService ..> jvmetro.payment.FareCalculator
+  TicketService ..> jvmetro.payment.StandardFareCalculator
+  TicketService ..> jvmetro.payment.DiscountedFareCalculator
+}
+
+' ========================================================
+' PACKAGE: jvmetro.page
+' ========================================================
+package "jvmetro.page" {
+
+  interface Page {
+    + show(scanner: Scanner): PageResult
+  }
+
+  interface PageResult <<sealed>> {
+  }
+
+  class "PageResult.Next" as PageResultNext <<record>> {
+    + page: Page
+  }
+  class "PageResult.Back" as PageResultBack <<record>> {
+  }
+  class "PageResult.Replace" as PageResultReplace <<record>> {
+    + page: Page
+  }
+  class "PageResult.Exit" as PageResultExit <<record>> {
+  }
+  class "PageResult.Stay" as PageResultStay <<record>> {
+  }
+
+  PageResult <|.. PageResultNext
+  PageResult <|.. PageResultBack
+  PageResult <|.. PageResultReplace
+  PageResult <|.. PageResultExit
+  PageResult <|.. PageResultStay
+  PageResultNext ..> Page
+  PageResultReplace ..> Page
+
+  class PageController {
+    - stack: ArrayDeque<Page>
+    - scanner: Scanner
+    + PageController(startingPage: Page)
+    + run(): void
+  }
+
+  PageController "1" o--> "*" Page : stack
+  PageController ..> PageResult
+}
+
+' ========================================================
+' PACKAGE: jvmetro.cli
+' ========================================================
+package "jvmetro.cli" {
+
+  class Common {
+    + {static} MENU_BACK: int
+    + {static} promptInput(scanner, message): String
+    + {static} promptMenu(scanner, menu, backMessage): int
+    + {static} printTrains(trains: Train[]): void
+    + {static} printStations(stations: Station[]): void
+    + {static} printTickets(tickets: Ticket[]): void
+  }
+
+  class MetroApp {
+    - fileManager: FileManager
+    - userService: UserService
+    - pageController: PageController
+    ~ currentUser: User
+    - sessionPassenger: PassengerSession
+    - sessionAdmin: AdminSession
+    - LoginPage: Page
+    - RegisterPage: Page
+    - MainMenuPage: Page
+    + MetroApp(fileManager: FileManager)
+    + saveState(): void
+    + run(): void
+    + login(email: String, password: String): Page
+    + getUserService(): UserService
+    + getFileManager(): FileManager
+  }
+
+  class PassengerSession {
+    - app: MetroApp
+    - passenger: Passenger
+    - paymentService: PaymentService
+    - stationService: StationService
+    - trainService: TrainService
+    - routeService: RouteService
+    - ticketService: TicketService
+    - StationsPage: Page
+    - TicketsPage: Page
+    - ProfilePage: Page
+    + MainMenu: Page
+    + PassengerSession(app: MetroApp, current: Passenger)
+    + saveState(): void
+    - getPassenger(): Passenger
+    - findRoute(scanner: Scanner): Route
+    - topup(scanner: Scanner): void
+    + getApp(): MetroApp
+    + getPaymentService(): PaymentService
+    + getStationService(): StationService
+    + getTrainService(): TrainService
+    + getRouteService(): RouteService
+    + getTicketService(): TicketService
+  }
+
+  class AdminSession {
+    - app: MetroApp
+    - admin: Admin
+    - stationService: StationService
+    - trainService: TrainService
+    - routeService: RouteService
+    - ticketService: TicketService
+    - StationManagement: Page
+    - TrainManagement: Page
+    - ProfilePage: Page
+    + MainMenu: Page
+    + AdminSession(app: MetroApp, admin: Admin)
+    + saveState(): void
+    - getAdmin(): Admin
+    - addStation(scanner: Scanner): void
+    - addRoute(scanner: Scanner): void
+    - findRoute(scanner: Scanner): void
+    - generateReport(): void
+  }
+
+  MetroApp "1" --> "1" jvmetro.repository.FileManager
+  MetroApp "1" --> "1" UserService
+  MetroApp "1" --> "1" jvmetro.page.PageController
+  MetroApp "1" ..> "0..1" PassengerSession
+  MetroApp "1" ..> "0..1" AdminSession
+  MetroApp ..> jvmetro.model.User
+  MetroApp ..> InvalidLoginException
+  MetroApp ..> DuplicateEntryException
+  MetroApp ..> jvmetro.page.Page
+  MetroApp ..> jvmetro.page.PageResult
+
+  PassengerSession "1" --> "1" MetroApp
+  PassengerSession "1" --> "1" jvmetro.model.Passenger
+  PassengerSession "1" --> "1" jvmetro.payment.PaymentService
+  PassengerSession "1" --> "1" StationService
+  PassengerSession "1" --> "1" TrainService
+  PassengerSession "1" --> "1" RouteService
+  PassengerSession "1" --> "1" TicketService
+  PassengerSession ..> Common
+  PassengerSession ..> jvmetro.page.Page
+  PassengerSession ..> jvmetro.page.PageResult
+  PassengerSession ..> jvmetro.payment.CardPayment
+  PassengerSession ..> jvmetro.payment.CashPayment
+  PassengerSession ..> EntryNotFoundException
+  PassengerSession ..> jvmetro.model.InsufficientBalanceException
+
+  AdminSession "1" --> "1" MetroApp
+  AdminSession "1" --> "1" jvmetro.model.Admin
+  AdminSession "1" --> "1" StationService
+  AdminSession "1" --> "1" TrainService
+  AdminSession "1" --> "1" RouteService
+  AdminSession "1" --> "1" TicketService
+  AdminSession ..> Common
+  AdminSession ..> jvmetro.page.Page
+  AdminSession ..> jvmetro.page.PageResult
+  AdminSession ..> EntryNotFoundException
+  AdminSession ..> DuplicateEntryException
+
+  Common ..> jvmetro.model.Station
+  Common ..> jvmetro.model.Train
+  Common ..> jvmetro.model.Ticket
+}
+
+' ========================================================
+' Main entry point wiring
+' ========================================================
+Main ..> jvmetro.repository.TextFileManager
+Main ..> MetroApp
+
+@enduml

@@ -1,27 +1,23 @@
 package jvmetro.page;
 
 import java.util.ArrayDeque;
-import java.util.Scanner;
 import java.util.Objects;
 
 public class PageController {
-  ArrayDeque<Page> stack;
-  Scanner scanner;
-
-  public PageController(Page startingPage) {
-    Objects.requireNonNull(startingPage, "Starting Page cannot be null!");
-
+  private ArrayDeque<Page> stack;
+  public PageController(){
     stack = new ArrayDeque<>();
-    stack.push(startingPage);
-    this.scanner = new Scanner(System.in);
   }
 
-  public void run() {
+  public void run(Page from) {
+    Objects.requireNonNull(from, "Starting Page cannot be null!");
+    stack.push(from);
+
     while (!stack.isEmpty()) {
       Page page = stack.peek();
 
       System.out.println();
-      PageResult res = page.show(scanner);
+      PageResult res = page.show();
 
       switch (res) {
         case PageResult.Next next:
@@ -30,10 +26,6 @@ public class PageController {
         case PageResult.Back back:
           stack.pop();
           break;
-        case PageResult.Replace replace:
-          stack.pop();
-          stack.push(replace.page());
-          break;
         case PageResult.Stay s:
           continue;
         case PageResult.Exit e:
@@ -41,7 +33,5 @@ public class PageController {
           break;
       }
     }
-
-    this.scanner.close();
   }
 }

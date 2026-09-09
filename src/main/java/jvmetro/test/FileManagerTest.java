@@ -1,4 +1,4 @@
-package jvmetro.tests;
+package jvmetro.test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,8 +9,7 @@ import java.io.IOException;
 import jvmetro.repository.*;
 
 public class FileManagerTest {
-  final ArrayList<HashMap<String, String>> RECORDS;
-  final TestLogger logger = new TestLogger("FileManagerTest");
+  final ArrayList<HashMap<String, String>> records;
 
   public FileManagerTest() {
     HashMap<String, String> map1 = new HashMap<>(Map.of(
@@ -77,38 +76,43 @@ public class FileManagerTest {
         "type6", "Dev_123",
         "type7", "QA"));
 
-    RECORDS = new ArrayList<>(Arrays.asList(map1, map2, map3, map4, map5, map6, map7, map8));
+    records = new ArrayList<>(Arrays.asList(map1, map2, map3, map4, map5, map6, map7, map8));
   }
 
-  private void testManager(FileManager fm) {
+  private boolean test(FileManager manager) {
     try {
-      fm.writeData("test_data", RECORDS);
+      manager.writeData("test_data", this.records);
+      ArrayList<HashMap<String, String>> received = manager.readData("test_data");
 
-      ArrayList<HashMap<String, String>> received = fm.readData("test_data");
-
-      if (RECORDS.equals(received))
-        logger.logMessage(fm.toString() + " Succeded!");
-      else
-        logger.logError(fm.toString() + " read mismatched input!");
-    } catch (IOException ex) {
-      logger.logError(fm.toString() + " IOException: " + ex.getMessage());
-      ex.printStackTrace();
-    } catch (FileProcessingException ex) {
-      logger.logError(fm.toString() + " FileProcessingException: " + ex.getMessage());
+      return records.equals(received);
+    } catch (IOException | FileProcessingException ex) {
+      System.out.println("Caught an Exception while testing a FileManager");
+      System.err.println(ex.getMessage());
       ex.printStackTrace();
     }
+
+    return false;
   }
 
-  public void run() {
-    try {
-      TextFileManager tfm = new TextFileManager();
+  public void run() throws IOException {
+    FileManager manager;
+    manager = new TextFileManager();
+    if (test(manager))
+      System.out.println("TextFileManager test passed");
+    else
+      System.out.println("TextFileManager test failed");
 
-      testManager(tfm);
+    manager = new JsonFileManager();
+    if (test(manager))
+      System.out.println("JsonFileManager test passed");
+    else
+      System.out.println("JsonFileManager test failed");
 
-      logger.logMessage("Finished!");
-    } catch (IOException ex) {
-      logger.logError("Failed to run the test! IOException: " + ex.getMessage());
-      ex.printStackTrace();
-    }
+    manager = new XMLFileManager();
+    if (test(manager))
+      System.out.println("XMLFileManager test passed");
+    else
+      System.out.println("XMLFileManager test failed");
+
   }
 }

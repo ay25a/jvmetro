@@ -1,0 +1,86 @@
+@startuml 02_Domain_Model
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "jvmetro.model" {
+
+  enum UserRole {
+    ADMIN
+    PASSENGER
+  }
+
+  enum TicketStatus {
+    ACTIVE
+    CANCELLED
+    USED
+  }
+
+  enum TicketType {
+    SINGLE
+    DAILY
+    MONTHLY
+  }
+
+  abstract class User <<sealed>> {
+    - name: String
+    - email: String
+    - role: UserRole
+    + setName(name): void
+    + login(email, password): boolean
+  }
+
+  class Passenger {
+    - balance: double
+    + deductBalance(amount): void
+    + addBalance(amount): void
+  }
+
+  class Admin {
+  }
+
+  class Station <<record>> {
+    + name: String
+    + location: String
+  }
+
+  class Route <<record>> {
+    + id: int
+    + srcStationName: String
+    + destStationName: String
+    + distanceKM: double
+  }
+
+  class Train <<record>> {
+    + name: String
+    + capacity: int
+  }
+
+  class Ticket {
+    - ticketID: int
+    - passengerEmail: String
+    - fare: double
+    - status: TicketStatus
+    - type: TicketType
+    + cancelTicket(): void
+    + useTicket(): void
+  }
+
+  User <|-- Passenger
+  User <|-- Admin
+  User "1" --> "1" UserRole
+
+  Ticket "*" --> "1" Passenger : issued to
+  Ticket --> TicketType
+  Ticket --> TicketStatus
+  Route "*" --> "2" Station : connects >
+}
+
+note bottom of Ticket
+  All model classes validate invariants
+  in their constructors and throw
+  DeserializationException on corrupted
+  load data (from()/serialize() pattern
+  omitted here for clarity).
+end note
+
+@enduml

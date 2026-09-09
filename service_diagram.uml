@@ -1,0 +1,78 @@
+@startuml 03_Services
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "jvmetro.repository" {
+  abstract class FileManager {
+    + readData(fileName): ArrayList<HashMap<String,String>>
+    + writeData(fileName, data): void
+  }
+  class TextFileManager {
+  }
+  FileManager <|-- TextFileManager
+}
+
+package "jvmetro.payment" {
+  interface Payment {
+    + pay(amount): boolean
+  }
+  class CashPayment
+  class CardPayment
+  Payment <|.. CashPayment
+  Payment <|.. CardPayment
+
+  class PaymentService {
+    + processPayment(payment, amount): boolean
+  }
+  PaymentService --> Payment
+
+  interface FareCalculator {
+    + calculateFare(route, type): double
+  }
+  class StandardFareCalculator
+  class DiscountedFareCalculator
+  FareCalculator <|.. StandardFareCalculator
+  FareCalculator <|.. DiscountedFareCalculator
+  DiscountedFareCalculator --> StandardFareCalculator : delegates to
+}
+
+package "jvmetro.service" {
+  class UserService {
+    + login(email, password): User
+    + addUser(user): void
+    + getUser(email): User
+  }
+  class StationService {
+    + addStation(station): void
+    + getStation(name): Station
+  }
+  class TrainService {
+    + addTrain(train): void
+  }
+  class RouteService {
+    + addRoute(src, dest, distance): void
+    + findRoute(src, dest): Route
+  }
+  class TicketService {
+    + addTicket(passenger, route, type): Ticket
+    + calculateFare(route, type): double
+    + updateTicket(userService, ticket): Ticket
+    + getPassengerTickets(passenger): ArrayList<Ticket>
+  }
+
+  UserService --> FileManager
+  StationService --> FileManager
+  TrainService --> FileManager
+  RouteService --> FileManager
+  TicketService --> FileManager
+  TicketService --> UserService : renews expired tickets via
+  TicketService --> FareCalculator : delegates fare math
+}
+
+note bottom of TicketService
+  EntryNotFoundException / DuplicateEntryException
+  are thrown by lookups and inserts across all
+  *Service classes (omitted here for clarity).
+end note
+
+@enduml

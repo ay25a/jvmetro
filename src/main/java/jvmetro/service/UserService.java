@@ -45,7 +45,7 @@ public class UserService {
   public User getUser(String email) throws EntryNotFoundException {
     User user = users.get(email);
 
-    if(user != null)
+    if (user != null)
       return user;
 
     throw new EntryNotFoundException("User does not exist!");

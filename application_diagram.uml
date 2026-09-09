@@ -1,0 +1,74 @@
+@startuml 04_Application_Layer
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "jvmetro.page" {
+  interface Page {
+    + show(scanner): PageResult
+  }
+  interface PageResult <<sealed>> {
+  }
+  note right of PageResult
+    Next, Back, Replace, Exit, Stay
+    (records implementing PageResult)
+  end note
+
+  class PageController {
+    - stack: ArrayDeque<Page>
+    + run(): void
+  }
+  PageController o--> "*" Page
+  PageController --> PageResult
+}
+
+package "jvmetro.cli" {
+  class Common {
+    + {static} promptInput(scanner, message): String
+    + {static} promptMenu(scanner, menu, back): int
+  }
+
+  class MetroApp {
+    - userService: UserService
+    - pageController: PageController
+    + login(email, password): Page
+    + saveState(): void
+    + run(): void
+  }
+
+  class PassengerSession {
+    - passenger: Passenger
+    - ticketService: TicketService
+    - routeService: RouteService
+    - stationService: StationService
+    - paymentService: PaymentService
+    + MainMenu: Page
+  }
+
+  class AdminSession {
+    - admin: Admin
+    - ticketService: TicketService
+    - routeService: RouteService
+    - stationService: StationService
+    - trainService: TrainService
+    + MainMenu: Page
+    - generateReport(): void
+  }
+
+  MetroApp "1" *-- "0..1" PassengerSession : creates on login
+  MetroApp "1" *-- "0..1" AdminSession : creates on login
+  MetroApp --> PageController
+  PassengerSession ..> Page : implements MainMenu/etc as
+  AdminSession ..> Page : implements MainMenu/etc as
+  PassengerSession ..> Common
+  AdminSession ..> Common
+}
+
+package "jvmetro" {
+  class Main {
+    + {static} main(args): void
+  }
+}
+
+Main ..> MetroApp : creates & runs
+
+@enduml

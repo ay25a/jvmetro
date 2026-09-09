@@ -1,142 +1,180 @@
 package jvmetro.cli;
 
 import java.util.Objects;
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.AbstractMap;
 import java.util.Scanner;
 import java.io.IOException;
 
 import jvmetro.repository.FileManager;
-import jvmetro.service.UserService;
-import jvmetro.service.InvalidLoginException;
-import jvmetro.service.DuplicateEntryException;
+import jvmetro.service.*;
+import jvmetro.payment.PaymentService;
 
 import jvmetro.model.User;
-import jvmetro.model.UserRole;
-import jvmetro.model.Admin;
 import jvmetro.model.Passenger;
+import jvmetro.model.Admin;
+import jvmetro.model.UserRole;
+import jvmetro.page.*;
 
-import jvmetro.page.PageController;
-import jvmetro.page.Page;
-import jvmetro.page.PageResult;
-
-public class MetroApp {
+public class MetroApp implements Page {
+  private final AppUtils utils;
   private final FileManager fileManager;
   private final UserService userService;
-  private final PageController pageController;
-  User currentUser = null;
-  private PassengerSession sessionPassenger = null;
-  private AdminSession sessionAdmin = null;
 
+  User user;
+  private PageController pageController;
+  private StationService stationService;
+  private TrainService trainService;
+  private TicketService ticketService;
+  private RouteService routeService;
+  private PaymentService paymentService;
+
+  private ArrayList<Map.Entry<String, Page>> menu;
+  private AuthPage authPage;
+  private ProfilePage profilePage;
+  private TicketsPage ticketsPage;
+  private StationsPage stationsPage;
+  private ReportPage reportPage;
+  private TrainsPage trainsPage;
+
+  // First initialization allows to run the authentication page
   public MetroApp(FileManager fileManager) {
-    this.fileManager = Objects.requireNonNull(fileManager, "FileManager cannot be null!");
-
+    this.fileManager = Objects.requireNonNull(fileManager);
     this.userService = new UserService(fileManager);
-    this.pageController = new PageController(MainMenuPage);
+
+    this.utils = new AppUtils(new Scanner(System.in));
+    this.authPage = new AuthPage(utils, userService);
+    pageController = new PageController();
+  }
+
+  // Final initialization of services, pages, and menu
+  private void initialize() {
+    routeService = new RouteService(fileManager);
+    stationService = new StationService(fileManager);
+
+    trainService = new TrainService(fileManager);
+    trainsPage = new TrainsPage(utils, trainService);
+    ticketService = new TicketService(fileManager, userService);
+
+
+    if (user.getRole() == UserRole.PASSENGER) {
+      paymentService = new PaymentService();
+      stationsPage = new StationsPage(utils, stationService, routeService);
+      profilePage = new ProfilePage(utils, (Passenger) user, userService, paymentService);
+      ticketsPage = new TicketsPage(utils, (Passenger) user, ticketService, stationService, routeService);
+    } else {
+      profilePage = new ProfilePage(utils, user, userService);
+      ticketsPage = new TicketsPage(utils, ticketService);
+      reportPage = new ReportPage(utils, ticketService, userService, stationService, routeService);
+      stationsPage = new StationsPage(utils, (Admin)user, stationService, routeService);
+    }
+
+    menu = new ArrayList<>();
+    menu.add(new AbstractMap.SimpleEntry<String, Page>("Profile Page", profilePage));
+    menu.add(new AbstractMap.SimpleEntry<String, Page>("Tickets Page", ticketsPage));
+    menu.add(new AbstractMap.SimpleEntry<String, Page>("Stations Page", stationsPage));
+
+    if (user.getRole() == UserRole.ADMIN) {
+      menu.add(new AbstractMap.SimpleEntry<String, Page>("Report Page", reportPage));
+      menu.add(new AbstractMap.SimpleEntry<String, Page>("Trains Page", trainsPage));
+    }
   }
 
   public void saveState() {
-    while (true) {
-      try {
-        userService.saveUsers(fileManager);
+    if (user == null)
+      return;
 
-        if (sessionAdmin != null)
-          sessionAdmin.saveState();
+    try {
+      userService.saveUsers(fileManager);
+      if (user.getRole() == UserRole.ADMIN) {
+        routeService.saveRoutes(fileManager);
+        stationService.saveStations(fileManager);
+        trainService.saveTrains(fileManager);
+      } else
+        ticketService.saveTickets(fileManager);
 
-        if (sessionPassenger != null)
-          sessionPassenger.saveState();
-
-        break;
-      } catch (IOException ex) {
-        System.err.println("Failed to save one or more service data!");
-        Scanner scanner = new Scanner(System.in);
-        String again = Common.promptInput(scanner, "Try Again? (yes/no) ").toLowerCase();
-
-        if (!again.equals("y") && !again.equals("yes")) {
-          System.out.println("Application new Data will not be saved...");
-          return;
-        }
-      }
+    } catch (IOException ex) {
+      System.err.println("Failed to save one or more service data!");
     }
   }
 
   public void run() {
-    pageController.run();
+    pageController.run(authPage);
+
+    user = authPage.getUser();
+    if (user == null)
+      return;
+
+    this.initialize();
+    pageController.run(this);
+    utils.scanner().close();
   }
 
-  public Page login(String email, String password) {
-    this.currentUser = this.userService.login(email, password);
+  @Override
+  public PageResult show() {
+    Objects.requireNonNull(menu, "Illegal call, run using MetroApp::run instead");
 
-    if (currentUser.getRole() == UserRole.ADMIN) {
-      sessionAdmin = new AdminSession(this, (Admin) currentUser);
-      return sessionAdmin.MainMenu;
-    }
-
-    sessionPassenger = new PassengerSession(this, (Passenger) currentUser);
-    return sessionPassenger.MainMenu;
-  }
-
-  public UserService getUserService() {
-    return userService;
-  }
-
-  public FileManager getFileManager() {
-    return fileManager;
-  }
-
-  private Page LoginPage = (scanner) -> {
-    System.out.println("===== Login =====");
-    String email = Common.promptInput(scanner, "Enter Email: ");
-    String password = Common.promptInput(scanner, "Enter Password: ");
-
-    try {
-      Page menu = this.login(email, password);
-      return new PageResult.Replace(menu);
-
-    } catch (InvalidLoginException ex) {
-      System.err.println(ex.getMessage());
-    }
-
-    return new PageResult.Back();
-  };
-
-  private final Page RegisterPage = (scanner) -> {
-    System.out.println("===== Create Account =====");
-    int role = Common.promptMenu(scanner, List.of("Admin", "Passenger"), "cancel");
-    if (role == Common.MENU_BACK)
-      return new PageResult.Back();
-
-    String name = Common.promptInput(scanner, "Enter Name: ");
-    String email = Common.promptInput(scanner, "Enter Email: ").toLowerCase();
-    String password = Common.promptInput(scanner, "Enter Password: ");
-
-    try {
-      if (role == 0)
-        getUserService().addUser(new Admin(name, email, password));
-      else
-        getUserService().addUser(new Passenger(name, email, password, 0.0));
-
-      Page menu = this.login(email, password);
-      return new PageResult.Replace(menu);
-
-    } catch (IllegalArgumentException | DuplicateEntryException ex) {
-      System.err.println(ex.getMessage());
-    } catch (InvalidLoginException ex) {
-      System.err.println("An error happend while creating the accont! report this issue to the staff!");
-    }
-
-    return new PageResult.Back();
-  };
-
-  private final Page MainMenuPage = (scanner) -> {
-    int choice = Common.promptMenu(scanner, List.of("Login", "Register"), "Exit");
-
-    switch (choice) {
-      case 0:
-        return new PageResult.Next(LoginPage);
-      case 1:
-        return new PageResult.Next(RegisterPage);
-    }
+    Page page = utils.askMenu(menu, "Log out");
+    if (page != null)
+      return new PageResult.Next(page);
 
     return new PageResult.Exit();
-  };
+  }
+
+  public static record AppUtils(Scanner scanner) {
+    public String askInput(String msg) {
+      System.out.print(msg);
+      return scanner.nextLine().trim();
+    }
+
+    // Prints a menu until a valid item has been choosen
+    // Returns true if user done an action or false if user wants to go back
+    public boolean askMenu(ArrayList<Map.Entry<String, Runnable>> menu) {
+      if (menu == null || menu.size() == 0)
+        return false;
+
+      System.out.println("======== Menu ========");
+      for (int i = 0; i < menu.size(); ++i)
+        System.out.printf("(%d) %s\n", i + 1, menu.get(i).getKey());
+      System.out.printf("(%d) %s\n", menu.size() + 1, "Back");
+
+      while (true) {
+        try {
+          int choice = Integer.parseInt(askInput("> ")) - 1;
+          if (choice == menu.size())
+            return false;
+
+          menu.get(choice).getValue().run();
+          return true;
+
+        } catch (NumberFormatException | IndexOutOfBoundsException ex) {
+          System.err.println("Invalid Menu Item");
+        }
+      }
+    }
+
+    public Page askMenu(ArrayList<Map.Entry<String, Page>> menu, String back) {
+      if (menu == null || menu.size() == 0)
+        return null;
+
+      System.out.println("======== Menu ========");
+      for (int i = 0; i < menu.size(); ++i)
+        System.out.printf("(%d) %s\n", i + 1, menu.get(i).getKey());
+
+      System.out.printf("(%d) %s\n", menu.size() + 1, back == null ? "Back" : back);
+      while (true) {
+        try {
+          int choice = Integer.parseInt(askInput("> ")) - 1;
+          if (choice == menu.size())
+            return null;
+
+          return menu.get(choice).getValue();
+
+        } catch (NumberFormatException | IndexOutOfBoundsException ex) {
+          System.err.println("Invalid Menu Item");
+        }
+      }
+    }
+  }
 }

@@ -1,0 +1,68 @@
+@startuml 01_Overview
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+
+package "jvmetro" {
+}
+
+package "jvmetro.cli" as cli {
+}
+
+package "jvmetro.page" as page {
+}
+
+package "jvmetro.service" as service {
+}
+
+package "jvmetro.model" as model {
+}
+
+package "jvmetro.repository" as repo {
+}
+
+package "jvmetro.payment" as payment {
+}
+
+jvmetro ..> cli : bootstraps
+
+cli ..> page : drives UI flow
+cli ..> service : uses
+cli ..> model : uses
+cli ..> payment : uses
+
+service ..> model : operates on
+service ..> repo : persists via
+
+payment ..> model : uses (Route, TicketType)
+
+note right of cli
+  Entry point / interactive session logic
+  (MetroApp, PassengerSession, AdminSession, Common)
+end note
+
+note right of page
+  Generic navigation framework
+  (Page, PageResult, PageController)
+end note
+
+note right of service
+  Business logic & in-memory stores
+  (UserService, TicketService, etc.)
+end note
+
+note right of model
+  Core domain entities
+  (User, Ticket, Route, Station, Train...)
+end note
+
+note right of repo
+  File-based persistence abstraction
+  (FileManager, TextFileManager)
+end note
+
+note right of payment
+  Fare calculation & payment methods
+end note
+
+@enduml
